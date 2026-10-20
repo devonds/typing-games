@@ -10,6 +10,11 @@ Ad-free typing games for the browser, for learning where the letters are.
 
 ## Play
 
+Online at **https://devonds.github.io/typing-games/**: a page to pick a game (click a card, or press 1 or 2).
+Every push to `main` rebuilds it (`.github/workflows/pages.yml`).
+
+To run it locally:
+
 ```sh
 npm install
 npm run dev        # http://localhost:5173, a page that links to both games

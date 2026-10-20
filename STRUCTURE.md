@@ -11,10 +11,11 @@ react to those events with effects and sounds; `look/` only draws. The rules are
 tested in `test/` without a browser.
 
 ```
-index.html               home page: links to both games
+index.html               home page: a card per game with a live preview; loads src/home/main.ts
 balloon-pop/index.html   Balloon Pop's page; loads src/balloon-pop/main.ts
 fresh-cuts/index.html    Fresh Cuts' page; loads src/fresh-cuts/main.ts
 src/
+├── home/main.ts         the home page's previews, drawn with each game's own look/ code
 ├── shared/              used by both games
 │   ├── input.ts         key presses and clicks, queued per game tick
 │   ├── lessons.ts       letter sets: all letters, home/top/bottom row, weak letters

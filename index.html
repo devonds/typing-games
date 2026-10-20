@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Typing Games</title>
+    <meta name="description" content="Two ad-free typing games for learning where the letters are: Balloon Pop and Fresh Cuts." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='4' width='14' height='9' rx='2' fill='%23c9a45c'/%3E%3Crect x='3' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='7' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='11' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='4' y='9' width='8' height='2' fill='%230f2219'/%3E%3C/svg%3E"
@@ -16,6 +17,7 @@
         --edge: #34304a;
         --text: #f3eee4;
         --dim: #a49db6;
+        --key: #2a2638;
       }
       * {
         box-sizing: border-box;
@@ -23,92 +25,178 @@
       body {
         margin: 0;
         min-height: 100vh;
-        background: var(--bg);
+        background: radial-gradient(ellipse at 50% 0%, #241f36, var(--bg) 60%) fixed, var(--bg);
         color: var(--text);
         font: 16px/1.5 system-ui, sans-serif;
-        display: grid;
-        place-content: center;
-        gap: 28px;
-        padding: 24px 16px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+        padding: 48px 16px 32px;
+      }
+      header {
+        text-align: center;
       }
       h1 {
         margin: 0;
-        text-align: center;
-        font-weight: 600;
-        letter-spacing: 0.02em;
+        font-size: clamp(30px, 6vw, 44px);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+      .keys {
+        display: inline-flex;
+        gap: 5px;
+        margin-bottom: 14px;
+      }
+      .keys span,
+      kbd {
+        display: inline-grid;
+        place-items: center;
+        min-width: 1.9em;
+        height: 1.9em;
+        padding: 0 0.4em;
+        border-radius: 6px;
+        background: var(--key);
+        border: 1px solid var(--edge);
+        border-bottom-width: 3px;
+        font: 600 15px/1 ui-monospace, Menlo, monospace;
+        color: var(--text);
+      }
+      kbd {
+        font-size: 12px;
+        height: 1.8em;
+        min-width: 1.8em;
+        margin: 0 2px;
+      }
+      header p {
+        margin: 8px 0 0;
+        color: var(--dim);
+        font-size: 18px;
       }
       .games {
-        width: min(720px, calc(100vw - 32px));
+        width: min(860px, 100%);
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 340px));
-        justify-content: center;
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+        gap: 24px;
       }
-      a {
-        display: block;
+      .game {
+        display: flex;
+        flex-direction: column;
         color: inherit;
         text-decoration: none;
         background: var(--card);
-        border: 1px solid var(--edge);
-        border-radius: 14px;
+        border: 2px solid var(--edge);
+        border-radius: 16px;
         overflow: hidden;
-        transition: transform 0.12s, border-color 0.12s;
+        transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
       }
-      a:hover,
-      a:focus-visible {
-        transform: translateY(-3px);
+      .game:hover,
+      .game:focus-visible {
+        transform: translateY(-4px);
         border-color: var(--accent);
+        box-shadow: 0 12px 30px -12px var(--accent);
         outline: none;
       }
-      .art {
-        height: 150px;
-        display: grid;
-        place-items: center;
-        font-size: 30px;
+      .game canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        background: var(--shade);
       }
       .balloon {
         --accent: #ffcd75;
+        --shade: #5d275d;
       }
-      .balloon .art {
-        background: linear-gradient(#5d275d, #b13e53 60%, #ef7d57);
-        font: 700 30px/1 ui-monospace, Menlo, monospace;
-        letter-spacing: 0.08em;
-        color: #ffcd75;
-        text-shadow: 3px 3px 0 #29366f;
+      .balloon canvas {
         image-rendering: pixelated;
       }
       .fresh {
         --accent: #c9a45c;
-      }
-      .fresh .art {
-        background: radial-gradient(circle at 50% 40%, #2d4a35, #0f2219 70%);
-        font: italic 600 34px/1 "Iowan Old Style", Palatino, Georgia, serif;
-        color: #fbe7b0;
+        --shade: #0f2219;
       }
       .about {
-        padding: 14px 18px 18px;
+        flex: 1;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 4px 16px;
+        padding: 16px 20px 20px;
       }
-      .about strong {
-        display: block;
-        font-size: 18px;
+      .about h2 {
+        margin: 0;
+        font-size: 22px;
       }
-      .about span {
+      .balloon h2 {
+        font: 700 20px/1.2 ui-monospace, Menlo, monospace;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+      }
+      .fresh h2 {
+        font: italic 600 26px/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        color: #fbe7b0;
+      }
+      .about p {
+        grid-column: 1;
+        margin: 0;
+        color: var(--dim);
+        font-size: 15px;
+      }
+      .play {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        padding: 10px 18px;
+        border-radius: 999px;
+        background: var(--accent);
+        color: #16121e;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      footer {
+        width: min(860px, 100%);
         color: var(--dim);
         font-size: 14px;
+        text-align: center;
+      }
+      footer p {
+        margin: 4px 0;
+      }
+      footer a {
+        color: var(--text);
       }
     </style>
   </head>
   <body>
-    <h1>Typing Games</h1>
-    <div class="games">
-      <a class="balloon" href="balloon-pop/">
-        <div class="art">BALLOON POP</div>
-        <div class="about"><strong>Balloon Pop</strong><span>Pop the balloons over a pixel city before they float away.</span></div>
+    <header>
+      <div class="keys" aria-hidden="true"><span>A</span><span>S</span><span>D</span><span>F</span></div>
+      <h1>Typing Games</h1>
+      <p>Pick a game, then type the letters you see.</p>
+    </header>
+
+    <main class="games">
+      <a class="game balloon" href="balloon-pop/" data-key="1">
+        <canvas id="preview-balloon-pop" aria-hidden="true"></canvas>
+        <div class="about">
+          <h2>BALLOON POP</h2>
+          <p>Pop the balloons over the city before they float away.</p>
+          <span class="play">Play <kbd>1</kbd></span>
+        </div>
       </a>
-      <a class="fresh" href="fresh-cuts/">
-        <div class="art">Fresh Cuts</div>
-        <div class="about"><strong>Fresh Cuts</strong><span>Slice the fruit flying around the grocer's. Leave the rotten ones alone.</span></div>
+      <a class="game fresh" href="fresh-cuts/" data-key="2">
+        <canvas id="preview-fresh-cuts" aria-hidden="true"></canvas>
+        <div class="about">
+          <h2>Fresh Cuts</h2>
+          <p>Slice the fruit flying around the grocer's. Leave the rotten ones alone!</p>
+          <span class="play">Play <kbd>2</kbd></span>
+        </div>
       </a>
-    </div>
+    </main>
+
+    <footer>
+      <p>For grown-ups: no ads, no accounts, nothing sent anywhere. Scores and practice letters are saved in this browser.</p>
+      <p>Each game can practice the home row, top row, bottom row, or the letters you find hardest.</p>
+      <p><a href="https://github.com/devonds/typing-games">Source on GitHub</a></p>
+    </footer>
+
+    <script type="module" src="/src/home/main.ts"></script>
   </body>
 </html>
