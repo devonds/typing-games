@@ -1,0 +1,89 @@
+<!doctype html>
+<!-- PROTOTYPE (throwaway): compares looks for Fresh Cuts. Not the game. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fresh Cuts: look prototype</title>
+    <link rel="icon" href="data:," />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #15121a;
+        color: #eee8dc;
+        font: 13px system-ui, sans-serif;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        grid-template-rows: 1fr auto;
+      }
+      main {
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        display: block;
+        image-rendering: pixelated;
+        border-radius: 6px;
+      }
+      #bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 14px;
+        padding: 10px 14px;
+        background: #221d29;
+        border-top: 1px solid #3a3344;
+      }
+      #looks {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .tag {
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        color: #ffb347;
+      }
+      button {
+        font: inherit;
+        color: inherit;
+        background: #2f2838;
+        border: 1px solid #4a4256;
+        border-radius: 6px;
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      button[aria-pressed="true"] {
+        background: #ffb347;
+        border-color: #ffb347;
+        color: #1b1420;
+        font-weight: 700;
+      }
+      label {
+        display: flex;
+        gap: 5px;
+        align-items: center;
+        cursor: pointer;
+      }
+      #blurb {
+        color: #b9b0c4;
+        flex-basis: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <main><canvas id="game"></canvas></main>
+    <div id="bar">
+      <span class="tag">PROTOTYPE</span>
+      <div id="looks"></div>
+      <label><input type="checkbox" id="rotten" /> Rotten fruit</label>
+      <label><input type="checkbox" id="auto" /> Autoplay</label>
+      <span id="blurb"></span>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

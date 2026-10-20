@@ -1,9 +1,7 @@
-import { H, W } from "./config";
-
 /** Input gathered since the last game tick. Letter keys are lowercase; others use KeyboardEvent.key names. */
 export interface Frame {
   keys: string[];
-  /** Clicks/taps in game pixels (0..W, 0..H). */
+  /** Clicks/taps in game coordinates (0..width, 0..height). */
   clicks: { x: number; y: number }[];
 }
 
@@ -15,8 +13,11 @@ export class Input {
   private keys: string[] = [];
   private clicks: Frame["clicks"] = [];
 
-  /** onGesture runs on every key/click: browsers only allow sound after one. */
-  constructor(canvas: HTMLCanvasElement, onGesture: () => void) {
+  /**
+   * `size` is the game's own coordinate space, so clicks come out in game units however big the canvas is shown.
+   * onGesture runs on every key/click: browsers only allow sound after one.
+   */
+  constructor(canvas: HTMLCanvasElement, size: { width: number; height: number }, onGesture: () => void) {
     window.addEventListener("keydown", (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return; // leave browser shortcuts alone
       const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
@@ -30,7 +31,7 @@ export class Input {
     canvas.addEventListener("pointerdown", (e) => {
       onGesture();
       const r = canvas.getBoundingClientRect();
-      this.clicks.push({ x: ((e.clientX - r.left) / r.width) * W, y: ((e.clientY - r.top) / r.height) * H });
+      this.clicks.push({ x: ((e.clientX - r.left) / r.width) * size.width, y: ((e.clientY - r.top) / r.height) * size.height });
     });
   }
 

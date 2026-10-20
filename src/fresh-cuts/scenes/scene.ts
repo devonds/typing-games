@@ -1,23 +1,21 @@
+import type { Frame } from "../../shared/input";
+import type { Stats } from "../../shared/letters";
 import type { Sfx } from "../audio";
-import type { Stats } from "../game/stats";
-import type { Frame } from "../input";
-import type { Pixels } from "../look/pixels";
-import type { Scenery } from "../look/scenery";
 import type { Settings } from "../storage";
 
-/** One screen of the game. update runs 60 times a second; draw runs once per browser frame. */
+/** One screen of the game. update runs 60 times a second; draw runs once per browser frame, in scene units. */
 export interface Scene {
   update(dt: number, input: Frame): void;
-  draw(p: Pixels): void;
+  draw(ctx: CanvasRenderingContext2D): void;
   /** Called when the tab or window loses focus. */
   pause?(): void;
 }
 
 export interface RoundResult {
   score: number;
-  popped: number;
+  sliced: number;
   seconds: number;
-  /** Pops divided by all letter keys pressed, 0..1; null if no keys were pressed. */
+  /** Slices divided by all letter keys pressed, 0..1; null if no keys were pressed. */
   accuracy: number | null;
   best: number;
   newBest: boolean;
@@ -37,5 +35,5 @@ export interface App {
   submitScore(score: number): number;
   showMenu(): void;
   startGame(): void;
-  showResults(result: RoundResult, scenery: Scenery): void;
+  showResults(result: RoundResult): void;
 }

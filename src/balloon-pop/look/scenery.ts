@@ -1,6 +1,6 @@
 // The dusk city backdrop. The sky slowly turns from dusk to night as a round goes on.
 import { GROUND_Y, H, W } from "../config";
-import { seededRandom } from "../rng";
+import { seededRandom } from "../../shared/rng";
 import { C } from "./palette";
 import { prerender, type Pixels } from "./pixels";
 

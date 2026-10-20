@@ -1,8 +1,9 @@
+import type { Frame } from "../../shared/input";
+import { trickyLetters, type Stats } from "../../shared/letters";
 import { POINTS_PER_POP, W } from "../config";
-import { recordEvent, trickyLetters, type Stats } from "../game/stats";
+import { recordEvent } from "../game/stats";
 import type { Balloon, GameEvent } from "../game/types";
 import { World } from "../game/world";
-import type { Frame } from "../input";
 import { Effects } from "../look/effects";
 import { drawHud } from "../look/hud";
 import { BALLOON_COLOURS, C } from "../look/palette";

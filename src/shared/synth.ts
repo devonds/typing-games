@@ -1,6 +1,6 @@
-// Chiptune sound effects made on the fly with the Web Audio API. No sound files.
+// Tiny Web Audio synth for game sound effects: sweeping tones and filtered noise. No sound files.
 
-export class Sfx {
+export class Synth {
   enabled = true;
   private ctx: AudioContext | null = null;
   private out: GainNode | null = null;
@@ -20,42 +20,12 @@ export class Sfx {
     if (this.ctx.state === "suspended") void this.ctx.resume();
   }
 
-  pop(): void {
-    this.tone(700, 1400, 0.07, "square", 0.12);
-    this.noise(0.06, 0.18, 4000);
-  }
-
-  launch(): void {
-    this.noise(0.18, 0.12, 500);
-    this.tone(120, 50, 0.16, "triangle", 0.2);
-  }
-
-  /** Soft and low: a nudge, not a punishment. */
-  wrong(): void {
-    this.tone(150, 130, 0.1, "triangle", 0.15);
-  }
-
-  escape(): void {
-    this.tone(520, 130, 0.4, "square", 0.05);
-  }
-
-  faster(): void {
-    [523, 659, 784, 1047].forEach((f, i) => this.tone(f, f, 0.07, "square", 0.07, i * 0.07));
-  }
-
-  gameOver(): void {
-    [523, 440, 349, 262].forEach((f, i) => this.tone(f, f * 0.98, 0.18, "triangle", 0.2, i * 0.18));
-  }
-
-  click(): void {
-    this.tone(880, 880, 0.03, "square", 0.05);
-  }
-
   private ready(): AudioContext | null {
     return this.enabled && this.ctx && this.ctx.state === "running" ? this.ctx : null;
   }
 
-  private tone(from: number, to: number, seconds: number, type: OscillatorType, volume: number, delay = 0): void {
+  /** A note sliding from one pitch to another while it fades out. */
+  protected tone(from: number, to: number, seconds: number, type: OscillatorType, volume: number, delay = 0): void {
     const ctx = this.ready();
     if (!ctx || !this.out) return;
     const t = ctx.currentTime + delay;
@@ -71,14 +41,15 @@ export class Sfx {
     osc.stop(t + seconds + 0.02);
   }
 
-  private noise(seconds: number, volume: number, cutoff: number): void {
+  /** A burst of hiss through a filter: low cutoffs thud, high ones swish. */
+  protected noise(seconds: number, volume: number, cutoff: number, filterType: BiquadFilterType = "lowpass", delay = 0): void {
     const ctx = this.ready();
     if (!ctx || !this.out || !this.noiseBuffer) return;
-    const t = ctx.currentTime;
+    const t = ctx.currentTime + delay;
     const src = ctx.createBufferSource();
     src.buffer = this.noiseBuffer;
     const filter = ctx.createBiquadFilter();
-    filter.type = "lowpass";
+    filter.type = filterType;
     filter.frequency.value = cutoff;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(volume, t);

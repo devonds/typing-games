@@ -1,15 +1,15 @@
-// Per-letter history, used to build the "weak letters" lesson.
-import type { GameEvent } from "./types";
+// Per-letter history, shared by every game, used to build the "weak letters" lesson.
+// A "hit" is a balloon popped or a fruit sliced; a "miss" is one that got away.
 
 export interface LetterStats {
-  /** Balloons with this letter that were launched. */
+  /** Times this letter appeared. */
   seen: number;
-  popped: number;
-  /** Floated away without being popped. */
-  escaped: number;
-  /** A wrong key was pressed while this letter was the oldest balloon in the air. */
+  hit: number;
+  /** Got away without being hit. */
+  missed: number;
+  /** A wrong key was pressed while this letter was the one to type next. */
   fumbles: number;
-  /** Total seconds from launch to pop, over all pops. */
+  /** Total seconds from appearing to being hit, over all hits. */
   reactionTotal: number;
 }
 
@@ -27,33 +27,31 @@ export const WEAK = {
 };
 
 function entry(stats: Stats, letter: string): LetterStats {
-  return (stats[letter] ??= { seen: 0, popped: 0, escaped: 0, fumbles: 0, reactionTotal: 0 });
+  return (stats[letter] ??= { seen: 0, hit: 0, missed: 0, fumbles: 0, reactionTotal: 0 });
 }
 
-export function recordEvent(stats: Stats, event: GameEvent): void {
-  switch (event.type) {
-    case "launched":
-      entry(stats, event.balloon.letter).seen += 1;
-      break;
-    case "popped": {
-      const s = entry(stats, event.balloon.letter);
-      s.popped += 1;
-      s.reactionTotal += event.reactionTime;
-      break;
-    }
-    case "escaped":
-      entry(stats, event.balloon.letter).escaped += 1;
-      break;
-    case "wrongKey":
-      if (event.expected) entry(stats, event.expected).fumbles += 1;
-      break;
-  }
+export function recordSeen(stats: Stats, letter: string): void {
+  entry(stats, letter).seen += 1;
 }
 
-/** Higher is weaker: mostly how often the letter got away, plus a little for slow pops. */
+export function recordHit(stats: Stats, letter: string, reactionTime: number): void {
+  const s = entry(stats, letter);
+  s.hit += 1;
+  s.reactionTotal += reactionTime;
+}
+
+export function recordMiss(stats: Stats, letter: string): void {
+  entry(stats, letter).missed += 1;
+}
+
+export function recordFumble(stats: Stats, letter: string): void {
+  entry(stats, letter).fumbles += 1;
+}
+
+/** Higher is weaker: mostly how often the letter got away, plus a little for slow hits. */
 export function weakness(s: LetterStats): number {
-  const missRate = (s.escaped + 0.5 * s.fumbles + 0.5) / (s.seen + 1);
-  const averageReaction = s.popped > 0 ? s.reactionTotal / s.popped : 10;
+  const missRate = (s.missed + 0.5 * s.fumbles + 0.5) / (s.seen + 1);
+  const averageReaction = s.hit > 0 ? s.reactionTotal / s.hit : 10;
   return missRate + averageReaction / 20;
 }
 
@@ -71,7 +69,7 @@ export function weakLetters(stats: Stats, count = WEAK.count): string[] | null {
 /** Letters that got away or were fumbled this round, most trouble first. */
 export function trickyLetters(round: Stats, count = 5): string[] {
   return Object.entries(round)
-    .map(([letter, s]) => [letter, s.escaped + s.fumbles] as const)
+    .map(([letter, s]) => [letter, s.missed + s.fumbles] as const)
     .filter(([, trouble]) => trouble > 0)
     .sort((a, b) => b[1] - a[1])
     .slice(0, count)
@@ -85,7 +83,7 @@ export function mergeRound(history: Stats, round: Stats, keep = WEAK.keep): Stat
     const old = history[letter];
     const now = round[letter];
     const m = entry(merged, letter);
-    for (const key of ["seen", "popped", "escaped", "fumbles", "reactionTotal"] as const) {
+    for (const key of ["seen", "hit", "missed", "fumbles", "reactionTotal"] as const) {
       m[key] = (old?.[key] ?? 0) * keep + (now?.[key] ?? 0);
     }
   }

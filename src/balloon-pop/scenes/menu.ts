@@ -1,7 +1,7 @@
+import type { Frame } from "../../shared/input";
+import { LESSON_IDS, lessonById, type LessonId } from "../../shared/lessons";
+import { weakLetters } from "../../shared/letters";
 import { BALLOON_COLOUR_COUNT, H, W } from "../config";
-import { weakLetters } from "../game/stats";
-import type { Frame } from "../input";
-import { LESSON_IDS, lessonById, type LessonId } from "../lessons";
 import { C } from "../look/palette";
 import type { Pixels } from "../look/pixels";
 import { Scenery } from "../look/scenery";

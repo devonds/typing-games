@@ -1,41 +1,47 @@
-# Balloon Pop
+# Typing Games
 
-An ad-free typing game for the browser. Balloons with letters float up from little cannons over a pixel-art city;
-type a letter to pop its balloon before it floats away.
+Ad-free typing games for the browser, for learning where the letters are.
 
-Inspired by typing.com's Type-a-Balloon (see `NOTES.md` for how that one works).
+- **Balloon Pop**: balloons with letters float up from little cannons over a pixel-art city. Type a letter to pop its
+  balloon before it floats away. Inspired by typing.com's Type-a-Balloon (`NOTES.md`).
+- **Fresh Cuts**: fruit is tossed up from the crates of a grocer's shop at night. Type the letter on a fruit's tag to
+  slice it before it falls. Leave the rotten apples alone; slice a frozen one for a few seconds of slow motion.
+  Inspired by typing.com's Keyboard Ninja (`NOTES-keyboard-ninja.md`).
 
 ## Play
 
 ```sh
 npm install
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173, a page that links to both games
 ```
 
 To build a static copy you can put on any web server: `npm run build`, then serve the `dist/` folder
 (`npm run preview` does that locally). Opening `dist/index.html` straight from disk won't work; browsers block
 module scripts on `file://`.
 
-**Keys:** letters pop balloons. In the menu, ↑ ↓ choose a row, ← → change it, Enter plays. Esc pauses; Esc again
-goes back to the menu. The game also pauses when you switch tabs. Clicking works too.
+**Keys, in both games:** letters pop or slice. In the menu, ↑ ↓ choose a row, ← → change it, Enter plays. Esc pauses;
+Esc again goes back to the menu. The games also pause when you switch tabs. Clicking works too.
 
-## Settings (in the menu)
+## Settings (in each game's menu)
 
-| Setting | Options |
-|---------|---------|
-| Lesson  | All letters, Home row, Top row, Bottom row, Weak letters |
-| Level   | Easy (3 cannons, slow), Medium (5), Hard (8, fast) |
-| Speed   | Speeds up during a round, or Steady |
-| Sound   | On / Off |
+| Setting      | Options |
+|--------------|---------|
+| Lesson       | All letters, Home row, Top row, Bottom row, Weak letters |
+| Level        | Easy, Medium, Hard |
+| Speed        | Speeds up during a round, or Steady |
+| Rotten fruit | On / Off (Fresh Cuts only) |
+| Sound        | On / Off |
 
-Wrong keys never cost points. "Weak letters" becomes available after a few rounds: it picks the letters that
-most often float away, get fumbled, or are slow to pop. Everything is saved in this browser only.
+Wrong keys never cost points. "Weak letters" becomes available after a few rounds: it picks the letters that most
+often get away, get fumbled, or are slow to hit. Both games share that letter history, so a round of either counts.
+Everything is saved in this browser only.
 
 ## Develop
 
 ```sh
-npm test           # rules + stats tests
+npm test           # rules + letter history tests
 npm run typecheck
 ```
 
-Tune the game in `src/config.ts`, add or change lessons in `src/lessons.ts`. `STRUCTURE.md` explains the code.
+Each game's numbers are in its `config.ts`; the lessons are in `src/shared/lessons.ts`. `STRUCTURE.md` explains the
+code.

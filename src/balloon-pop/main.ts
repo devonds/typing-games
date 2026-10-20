@@ -1,9 +1,10 @@
 // Boots the game: canvas, input, sound, saved data, the scene switcher and the main loop.
 import { Sfx } from "./audio";
 import { H, W } from "./config";
-import { mergeRound, type Stats } from "./game/stats";
-import { Input, NO_INPUT } from "./input";
-import { lettersFor } from "./lessons";
+import { Input, NO_INPUT } from "../shared/input";
+import { lettersFor } from "../shared/lessons";
+import { mergeRound, type Stats } from "../shared/letters";
+import { loadLetterHistory, saveLetterHistory } from "../shared/storage";
 import { Pixels } from "./look/pixels";
 import type { Scenery } from "./look/scenery";
 import { MenuScene } from "./scenes/menu";
@@ -28,13 +29,13 @@ addEventListener("resize", fit);
 fit();
 
 const sfx = new Sfx();
-const input = new Input(canvas, () => sfx.unlock());
+const input = new Input(canvas, { width: W, height: H }, () => sfx.unlock());
 let scene: Scene;
 
 class Game implements App {
   readonly settings = storage.loadSettings();
   readonly sfx = sfx;
-  private history: Stats = storage.loadStats();
+  private history: Stats = loadLetterHistory();
   private best = storage.loadBest();
 
   constructor() {
@@ -53,7 +54,7 @@ class Game implements App {
   finishRound(round: Stats): void {
     if (Object.keys(round).length === 0) return;
     this.history = mergeRound(this.history, round);
-    storage.saveStats(this.history);
+    saveLetterHistory(this.history);
   }
 
   submitScore(score: number): number {

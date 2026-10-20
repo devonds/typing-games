@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { LIVES, POINTS_PER_POP } from "../src/config";
-import type { GameEvent } from "../src/game/types";
-import { World, type WorldOptions } from "../src/game/world";
-import { seededRandom } from "../src/rng";
+import { LIVES, POINTS_PER_POP } from "../../src/balloon-pop/config";
+import type { GameEvent } from "../../src/balloon-pop/game/types";
+import { World, type WorldOptions } from "../../src/balloon-pop/game/world";
+import { seededRandom } from "../../src/shared/rng";
 
 function makeWorld(overrides: Partial<WorldOptions> = {}): World {
   return new World({ letters: [..."asdf"], difficulty: "easy", speedMode: "steady", random: seededRandom(1), ...overrides });

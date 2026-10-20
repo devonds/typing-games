@@ -1,5 +1,5 @@
+import type { Frame } from "../../shared/input";
 import { W } from "../config";
-import type { Frame } from "../input";
 import { C } from "../look/palette";
 import type { Pixels } from "../look/pixels";
 import type { Scenery } from "../look/scenery";

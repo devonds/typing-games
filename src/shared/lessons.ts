@@ -1,4 +1,4 @@
-import { weakLetters, type Stats } from "./game/stats";
+import { weakLetters, type Stats } from "./letters";
 
 export type LessonId = "all" | "home" | "top" | "bottom" | "weak";
 
