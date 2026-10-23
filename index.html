@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Typing Games</title>
-    <meta name="description" content="Two ad-free typing games for learning where the letters are: Balloon Pop and Fresh Cuts." />
+    <meta name="description" content="Three ad-free typing games for learning where the letters are: Balloon Pop, Fresh Cuts and Word Garden." />
     <link
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='1' y='4' width='14' height='9' rx='2' fill='%23c9a45c'/%3E%3Crect x='3' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='7' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='11' y='6' width='2' height='2' fill='%230f2219'/%3E%3Crect x='4' y='9' width='8' height='2' fill='%230f2219'/%3E%3C/svg%3E"
@@ -74,7 +74,7 @@
         font-size: 18px;
       }
       .games {
-        width: min(860px, 100%);
+        width: min(1180px, 100%);
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
         gap: 24px;
@@ -114,6 +114,10 @@
         --accent: #c9a45c;
         --shade: #0f2219;
       }
+      .garden {
+        --accent: #f4aaa2;
+        --shade: #f6dccb;
+      }
       .about {
         flex: 1;
         display: grid;
@@ -135,6 +139,10 @@
         font: italic 600 26px/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
         color: #fbe7b0;
       }
+      .garden h2 {
+        font: italic 600 26px/1.1 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+        color: #f8d6cf;
+      }
       .about p {
         grid-column: 1;
         margin: 0;
@@ -152,7 +160,7 @@
         white-space: nowrap;
       }
       footer {
-        width: min(860px, 100%);
+        width: min(1180px, 100%);
         color: var(--dim);
         font-size: 14px;
         text-align: center;
@@ -187,6 +195,14 @@
           <h2>Fresh Cuts</h2>
           <p>Slice the fruit flying around the grocer's. Leave the rotten ones alone!</p>
           <span class="play">Play <kbd>2</kbd></span>
+        </div>
+      </a>
+      <a class="game garden" href="word-garden/" data-key="3">
+        <canvas id="preview-word-garden" aria-hidden="true"></canvas>
+        <div class="about">
+          <h2>Word Garden</h2>
+          <p>Type whole sentences. Every letter blooms into flowers, butterflies, bubbles and more.</p>
+          <span class="play">Play <kbd>3</kbd></span>
         </div>
       </a>
     </main>

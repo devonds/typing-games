@@ -1,12 +1,13 @@
 # How the code is organised
 
-Two games, one repo. TypeScript + Canvas 2D, built with Vite as three pages: a home page and one page per game. No
+Three games, one repo. TypeScript + Canvas 2D, built with Vite as four pages: a home page and one page per game. No
 game engine and no image or sound files: everything is drawn in code and every sound is synthesised with Web Audio.
 
 ## The main idea: rules and drawing live apart
 
 Each game's `game/` folder holds its rules as plain TypeScript with no browser APIs. A `World` is stepped forward and
-sent key presses, and it returns a list of events (a fruit was sliced, a balloon escaped, the game is over...). Scenes
+sent key presses (Word Garden's is a `Round`), and it returns a list of events (a fruit was sliced, a balloon escaped,
+the game is over...). Scenes
 react to those events with effects and sounds; `look/` only draws. The rules are short, read top to bottom, and are
 tested in `test/` without a browser.
 
@@ -14,13 +15,14 @@ tested in `test/` without a browser.
 index.html               home page: a card per game with a live preview; loads src/home/main.ts
 balloon-pop/index.html   Balloon Pop's page; loads src/balloon-pop/main.ts
 fresh-cuts/index.html    Fresh Cuts' page; loads src/fresh-cuts/main.ts
+word-garden/index.html   Word Garden's page; loads src/word-garden/main.ts
 src/
 ├── home/main.ts         the home page's previews, drawn with each game's own look/ code
-├── shared/              used by both games
+├── shared/              used by every game
 │   ├── input.ts         key presses and clicks, queued per game tick
 │   ├── lessons.ts       letter sets: all letters, home/top/bottom row, weak letters
 │   ├── letters.ts       per-letter history -> "weak letters"; letters to practise after a round
-│   ├── storage.ts       localStorage helpers; the letter history both games share
+│   ├── storage.ts       localStorage helpers; the letter history all the games share
 │   ├── synth.ts         tones and filtered noise for sound effects
 │   └── rng.ts           seeded random numbers (scenery layout, tests)
 │
@@ -32,7 +34,7 @@ src/
 │   ├── look/            DRAWING: palette, 5x7 pixel font, pixels, dusk city scenery, balloons, effects, HUD
 │   └── scenes/          SCREENS: menu, play, results
 │
-└── fresh-cuts/          480x270 scene drawn at the screen's full resolution
+├── fresh-cuts/          480x270 scene drawn at the screen's full resolution
     ├── main.ts          canvas, saved data, scene switching, the 60 Hz loop
     ├── config.ts        every gameplay number: waves, air time, speed-up ramp, combos, rotten and frozen fruit, lives
     ├── audio.ts         knife swish, squish, thud, yuck
@@ -42,17 +44,34 @@ src/
     │   ├── fruit.ts     nine fruits + the rotten apple: outline, shaded skin, cut face; halves; the fly; ice blocks
     │   ├── store.ts     the grocer at night: shelves, slate price tags, spotlights, crates (painted once)
     │   ├── effects.ts   halves flying apart, juice, ice chips, slash streaks, stink puffs, words
-    │   └── ui.ts        serif text, letter tags, baskets, score, panels, slow-motion frost
+│   │   └── ui.ts        serif text, letter tags, baskets, score, panels, slow-motion frost
+│   └── scenes/          SCREENS: menu, play, results
+│
+└── word-garden/         480x270 scene drawn at the screen's full resolution
+    ├── main.ts          canvas, saved data, scene switching, the 60 Hz loop
+    ├── config.ts        burst kinds, sentence levels, round lengths, layout and timing, how hard Focus leans
+    ├── audio.ts         a wandering pentatonic tune, one note per letter, in each burst's own voice
+    ├── storage.ts       settings and best words per minute
+    ├── game/            RULES: round.ts (typing a sentence, punctuation filled in, speed and accuracy),
+    │                    sentences.ts (the sentence bank; picking a round's sentences by Focus), stats.ts, types.ts
+    ├── look/
+    │   ├── palette.ts   five times of day (dawn, midday, misty morning, sunset, night) and blending between them
+    │   ├── landscape.ts sky, sun or moon, clouds, hills in haze, swaying grass, motes or fireflies, paper grain
+    │   ├── words.ts     the sentence on one line and the marker under the next letter
+    │   ├── bursts/      what a typed letter turns into: flowers, butterflies, bubbles, confetti, fireworks
+    │   └── ui.ts        type, panels, progress dots, cheers
     └── scenes/          SCREENS: menu, play, results
 test/
 ├── shared/              letter history maths
 ├── balloon-pop/         rules
-└── fresh-cuts/          rules
+├── fresh-cuts/          rules
+└── word-garden/         rules, sentence bank and picking
 prototype/               throwaway look prototypes: Pyxel (picked Balloon Pop's "Dusk city"),
-                         fresh-cuts/ (picked "Night grocer"; `npm run prototype:fresh-cuts`)
+                         fresh-cuts/ (picked "Night grocer"; `npm run prototype:fresh-cuts`),
+                         sentences/ (Word Garden's first try: bursts vs. "comes alive"; `npm run prototype:sentences`)
 ```
 
-## How a frame works (both games)
+## How a frame works (every game)
 
 ```
 main loop (every display frame)
@@ -90,8 +109,21 @@ main loop (every display frame)
   wait). **Steady** mode never changes.
 - The sky turns from dusk (0:00) to twilight (1:15) to night (2:30); windows light up as it gets dark.
 
-## Weak letters (both games)
+## Weak letters (every game)
 
 Every throw or launch, hit, miss, and fumble (wrong key while that letter was the next one to type) is counted per
 letter. Older rounds fade (×0.8 per round). The 6 letters with the worst miss rate plus slowest hits form the lesson,
 once at least 4 letters have been seen 3+ times.
+
+## Word Garden rules in short
+
+- A round is 5 or 10 sentences: Short ones (up to about four words) or Longer ones (up to about eight), always on one
+  line. Focus picks sentences rich in the chosen letters (weighted, not strict: there are no sentences made only of
+  the bottom row). Last round's sentences are less likely to come straight back.
+- Type each letter, and the space bar between words. Capitals don't need shift; punctuation is filled in. A wrong key
+  just wiggles the next letter and counts as a fumble for it.
+- Each typed letter turns into the sentence's kind of burst. "Surprise me" shuffles all five so none repeats back to
+  back. After the last letter there's a pause to enjoy it ("Perfect!" if there were no wrong keys), then the next
+  sentence, and the sky moves on to that kind's time of day.
+- Words per minute count typing time only (from the first key of each sentence to its last), five characters to a
+  word. Best is kept per sentence length.

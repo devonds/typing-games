@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Word Garden</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M8 15 V9' stroke='%236f9460' stroke-width='1.4'/%3E%3Cg fill='%23f4aaa2'%3E%3Ccircle cx='8' cy='3.6' r='2.4'/%3E%3Ccircle cx='11.2' cy='5.9' r='2.4'/%3E%3Ccircle cx='10' cy='9.6' r='2.4'/%3E%3Ccircle cx='6' cy='9.6' r='2.4'/%3E%3Ccircle cx='4.8' cy='5.9' r='2.4'/%3E%3C/g%3E%3Ccircle cx='8' cy='6.8' r='1.9' fill='%23f6d47a'/%3E%3C/svg%3E"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #1b1a2c;
+        overflow: hidden;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="Word Garden, a typing game"></canvas>
+    <script type="module" src="/src/word-garden/main.ts"></script>
+  </body>
+</html>

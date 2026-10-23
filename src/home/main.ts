@@ -11,6 +11,12 @@ import { Effects as FruitEffects } from "../fresh-cuts/look/effects";
 import { drawIce, drawShadow, drawWhole, lookFor } from "../fresh-cuts/look/fruit";
 import { drawStore, drawVignette } from "../fresh-cuts/look/store";
 import { drawTag } from "../fresh-cuts/look/ui";
+import * as Garden from "../word-garden/config";
+import { isTyped } from "../word-garden/game/round";
+import { Bursts } from "../word-garden/look/bursts";
+import { Landscape } from "../word-garden/look/landscape";
+import { Sky } from "../word-garden/look/palette";
+import { Words } from "../word-garden/look/words";
 
 const LETTERS = "asdfghjkl";
 const randomLetter = () => LETTERS[Math.floor(Math.random() * LETTERS.length)];
@@ -156,12 +162,91 @@ class FruitPreview implements Preview {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Word Garden: short sentences type themselves, each in a different kind of burst and time of day.
+
+const GARDEN_SENTENCES = ["I love my dog.", "Birds can sing.", "The sun is up.", "Kites fly high.", "We sing a song."];
+
+class GardenPreview implements Preview {
+  private readonly ctx: CanvasRenderingContext2D;
+  private readonly landscape = new Landscape();
+  private readonly bursts = new Bursts();
+  private readonly sky = new Sky(Garden.BURSTS[0]);
+  private words: Words;
+  private sentence = 0;
+  private pos = 0;
+  private order = 0;
+  private untilKey = 0.8;
+  private doneFor = 0;
+
+  constructor(private readonly canvas: HTMLCanvasElement) {
+    this.ctx = canvas.getContext("2d", { alpha: false })!;
+    this.words = new Words(GARDEN_SENTENCES[0]);
+    this.fit();
+    new ResizeObserver(() => this.fit()).observe(canvas);
+  }
+
+  private fit(): void {
+    const dpr = devicePixelRatio || 1;
+    const width = Math.max(1, Math.round(this.canvas.clientWidth * dpr));
+    this.canvas.width = width;
+    this.canvas.height = Math.round((width * Garden.H) / Garden.W);
+  }
+
+  private get kind(): Garden.BurstKind {
+    return Garden.BURSTS[this.sentence % Garden.BURSTS.length];
+  }
+
+  update(dt: number): void {
+    this.landscape.update(dt);
+    this.sky.update(dt);
+    this.bursts.update(dt, this.landscape.t);
+    const text = this.words.text;
+    if (this.pos >= text.length) {
+      this.doneFor += dt;
+      if (this.doneFor > 2.2) {
+        this.bursts.release();
+        this.sentence += 1;
+        this.words = new Words(GARDEN_SENTENCES[this.sentence % GARDEN_SENTENCES.length]);
+        this.sky.go(this.kind);
+        this.pos = this.order = this.doneFor = 0;
+        this.untilKey = 1;
+      }
+    } else {
+      this.untilKey -= dt;
+      if (this.untilKey <= 0) {
+        const g = this.words.glyphs[this.pos];
+        if (g.ch !== " ") {
+          this.bursts.spawn(this.kind, g, this.words.font, this.order++);
+          this.words.typed(this.pos);
+        }
+        this.pos += 1;
+        while (this.pos < text.length && !isTyped(text[this.pos])) this.pos += 1;
+        this.untilKey = between(0.18, 0.3);
+      }
+    }
+    this.words.update(dt, this.pos);
+  }
+
+  draw(): void {
+    const ctx = this.ctx;
+    ctx.setTransform(this.canvas.width / Garden.W, 0, 0, this.canvas.height / Garden.H, 0, 0);
+    const p = this.sky.current;
+    this.landscape.draw(ctx, p);
+    this.words.draw(ctx, this.sky.target, this.pos, this.kind === "flowers");
+    this.bursts.draw(ctx, p);
+    this.landscape.drawAtmosphere(ctx, p);
+  }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 
 const previews: Preview[] = [];
 const balloonCanvas = document.querySelector<HTMLCanvasElement>("#preview-balloon-pop");
 const fruitCanvas = document.querySelector<HTMLCanvasElement>("#preview-fresh-cuts");
 if (balloonCanvas) previews.push(new BalloonPreview(balloonCanvas));
 if (fruitCanvas) previews.push(new FruitPreview(fruitCanvas));
+const gardenCanvas = document.querySelector<HTMLCanvasElement>("#preview-word-garden");
+if (gardenCanvas) previews.push(new GardenPreview(gardenCanvas));
 
 // Number keys pick a game, for anyone who'd rather not reach for the mouse.
 addEventListener("keydown", (e) => {

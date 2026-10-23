@@ -11,6 +11,7 @@ export default defineConfig({
         home: resolve(import.meta.dirname, "index.html"),
         "balloon-pop": resolve(import.meta.dirname, "balloon-pop/index.html"),
         "fresh-cuts": resolve(import.meta.dirname, "fresh-cuts/index.html"),
+        "word-garden": resolve(import.meta.dirname, "word-garden/index.html"),
       },
     },
   },
