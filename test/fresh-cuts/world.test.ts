@@ -132,6 +132,31 @@ describe("World", () => {
     expect(world.timeScale).toBe(1);
   });
 
+  it("throws a burst of fresh fruit to slice in slow motion, bigger when the game is faster", () => {
+    const sizes: number[] = [];
+    for (const difficulty of ["easy", "hard"] as const) {
+      const world = makeWorld({ difficulty, letters: [..."abcdefghijklmnopqrstuvwxyz"] });
+      let frozen;
+      for (let i = 0; i < 60 * 300 && !frozen; i++) {
+        world.step(1 / 60);
+        frozen = world.fruit.find((f) => f.frozen);
+        for (const f of world.fruit.filter((f) => !f.frozen)) world.press(f.letter);
+      }
+      expect(frozen).toBeDefined();
+      for (const f of world.fruit.filter((f) => !f.frozen)) world.press(f.letter);
+      world.press(frozen!.letter);
+      // The whole burst is up within a second, while everything is still slowed down.
+      const launched = ofType(run(world, 1), "launched");
+      expect(launched.length).toBeGreaterThanOrEqual(world.burstSize);
+      expect(launched.every((e) => !e.fruit.frozen && !e.fruit.rotten)).toBe(true);
+      expect(world.freezeLeft).toBeGreaterThan(0);
+      sizes.push(world.burstSize);
+    }
+    expect(sizes[0]).toBe(FREEZE.burst[0]);
+    expect(sizes[1]).toBeGreaterThan(sizes[0]);
+    expect(sizes[1]).toBeLessThanOrEqual(FREEZE.burst[1]);
+  });
+
   it("lets frozen fruit fall without losing a basket, and leaves it out of the letter history", () => {
     const stats: Stats = {};
     const world = makeWorld();

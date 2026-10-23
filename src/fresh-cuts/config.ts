@@ -54,6 +54,14 @@ export const FREEZE = {
   speed: 0.35,
   /** The last second speeds back up gently instead of snapping. */
   thaw: 1,
+  /**
+   * Slicing the frozen fruit throws a burst of extra fruit to slice in slow motion: `burst[0]` at the gentlest
+   * pace (easy, not sped up), one more for each `burstPerSpeed` of extra speed, up to `burst[1]`.
+   */
+  burst: [3, 6] as [min: number, max: number],
+  burstPerSpeed: 0.33,
+  /** Seconds between throws in the burst, on the slowed-down clock (so about three times that in real time). */
+  burstSpacing: [0.08, 0.16] as [number, number],
 };
 
 export const LAUNCH = {

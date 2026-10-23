@@ -156,6 +156,7 @@ export class World {
     if (fruit.frozen) {
       this.freezeLeft = FREEZE.seconds;
       events.push({ type: "freeze", seconds: FREEZE.seconds });
+      this.queueBurst();
     }
     return events;
   }
@@ -193,6 +194,24 @@ export class World {
       const [low, high] = WAVE.spacing;
       at += low + this.random() * (high - low);
     }
+  }
+
+  /** How many fruit the freezer burst throws: more the faster the game is going. */
+  get burstSize(): number {
+    const pace = (DIFFICULTIES.easy.airTime / DIFFICULTIES[this.options.difficulty].airTime) * this.speedMultiplier;
+    const [min, max] = FREEZE.burst;
+    return Math.min(max, min + Math.floor((pace - 1 + 1e-9) / FREEZE.burstPerSpeed));
+  }
+
+  /** A quick volley of fresh fruit, thrown alongside whatever is left of the wave, to slice in slow motion. */
+  private queueBurst(): void {
+    const [low, high] = FREEZE.burstSpacing;
+    let at = this.clock;
+    for (let i = 0; i < this.burstSize; i++) {
+      this.queue.push({ at, rotten: false, frozen: false });
+      at += low + this.random() * (high - low);
+    }
+    this.queue.sort((a, b) => a.at - b.at);
   }
 
   private launch({ rotten, frozen }: { rotten: boolean; frozen: boolean }): Fruit | null {
