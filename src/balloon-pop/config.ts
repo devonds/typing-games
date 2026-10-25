@@ -42,6 +42,54 @@ export const RAMP = {
   minInterval: 0.5, // ...down to half the wait
 };
 
+/** A pair or word scores POINTS_PER_POP a letter, plus this. */
+export const WORD_BONUS = 5;
+
+/** A timed round's length (seconds). In a timed round an escaped balloon costs points instead of a life. */
+export const ROUND_SECONDS = 120;
+export const ESCAPE_COST = 10;
+
+/** Balloons keep a little sky between them, softly: no bouncing. */
+export const SPACING = {
+  /** Pixels of sky wanted between two balloons. */
+  gap: 3,
+  /** Overlapping balloons ease apart sideways at this speed (pixels per second). */
+  push: 16,
+  /** A balloon with another just above it rises at this share of its speed until there's room. */
+  slowBelow: 0.5,
+};
+
+/** At most this many pairs and words in the air at once; beyond that, cannons fire single letters. */
+export const MAX_WIDE = 2;
+
+/** A cannon with nothing new to fire (every first letter is already in the air) tries again this much later. */
+export const RETRY_SECONDS = 0.5;
+
+/**
+ * Pairs and words ride on wide balloons, sized to their letters (12 pixels each at double size). Only the balloon
+ * colours with white letters are used for them, so typed letters can light up yellow.
+ */
+export const WIDE_COLOURS = [0, 3, 4];
+export function balloonHalfWidth(text: string): number {
+  return text.length === 1 ? BALLOON_RADIUS : text.length * 6 + 4;
+}
+
+/** After a wrong key, that key does nothing for this long (seconds), so mashing doesn't pop balloons. */
+export const FIZZLE_SECONDS = 0.5;
+
+/** Little hands: no time pressure, and a round is a fixed number of balloons. */
+export const LITTLE_HANDS = {
+  /** Balloons in one round. */
+  balloons: 20,
+  /** Balloons stop rising here (centre y) and bob until they're popped. */
+  hoverY: 34,
+  /** Cannons wait while this many balloons are already up. */
+  maxInAir: 4,
+};
+
+/** Results stars for Little hands: the share right first time needed for 2 and 3 stars. */
+export const STARS = { two: 0.7, three: 0.9 };
+
 /** Balloons leave the cannon fast, then drag slows them into a gentle rise. */
 export const LAUNCH_SPEED = 70;
 export const LAUNCH_DRAG = 2.5;

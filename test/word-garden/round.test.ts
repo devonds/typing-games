@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { recordEvent } from "../../src/word-garden/game/stats";
-import { Round } from "../../src/word-garden/game/round";
+import { logEvent } from "../../src/word-garden/game/stats";
+import { Round, typedUnder } from "../../src/word-garden/game/round";
 import type { RoundEvent } from "../../src/word-garden/game/types";
-import type { Stats } from "../../src/shared/letters";
+import { RoundLog, emptyHistory } from "../../src/shared/history";
 
 /** Type a string one key at a time, with `gap` seconds before each key. */
 function type(round: Round, keys: string, gap = 0.2): RoundEvent[] {
@@ -28,7 +28,7 @@ describe("Round", () => {
 
   it("waits on a wrong key and remembers the fumble", () => {
     const round = new Round(["ab"]);
-    expect(round.press("x")).toEqual([{ type: "wrongKey", key: "x", expected: "a" }]);
+    expect(round.press("x")).toEqual([{ type: "wrongKey", key: "x", expected: "a", wrongCase: false }]);
     expect(round.next).toBe("a");
     const [hit] = round.press("a");
     expect(hit).toMatchObject({ type: "letter", letter: "a", fumbled: true });
@@ -41,7 +41,7 @@ describe("Round", () => {
   it("needs the space bar between words", () => {
     const round = new Round(["a b"]);
     round.press("a");
-    expect(round.press("b")).toEqual([{ type: "wrongKey", key: "b", expected: " " }]);
+    expect(round.press("b")).toEqual([{ type: "wrongKey", key: "b", expected: " ", wrongCase: false }]);
     expect(round.press(" ")[0]).toEqual({ type: "space", index: 1 });
   });
 
@@ -74,12 +74,92 @@ describe("Round", () => {
     expect(round.wpm).toBe(240);
   });
 
-  it("feeds the letter history: every letter seen and hit, wrong keys as fumbles", () => {
-    const stats: Stats = {};
-    const round = new Round(["Go go."]);
-    for (const e of [...type(round, "gx"), ...type(round, "o go")]) recordEvent(stats, e);
-    expect(stats.g).toMatchObject({ seen: 2, hit: 2, fumbles: 0 });
-    expect(stats.o).toMatchObject({ seen: 2, hit: 2, fumbles: 1 });
-    expect(stats[" "]).toBeUndefined();
+  it("feeds the history: letters hit, wrong keys as fumbles, and pairs inside words", () => {
+    const log = new RoundLog();
+    const round = new Round(["Go go, Al."]);
+    for (const e of [...type(round, "gx"), ...type(round, "o go al")]) logEvent(log, e, round.text);
+    const h = log.mergeInto(emptyHistory(), 100);
+    expect(h.letters.g).toMatchObject({ seen: 2, hits: 2, fumbles: 0 });
+    expect(h.letters.o).toMatchObject({ seen: 2, hits: 2, fumbles: 1 });
+    expect(h.letters[" "]).toBeUndefined();
+    // "go" twice: the first o was fumbled, the second right first time. No pair across the space or the comma.
+    expect(h.pairs.go.recent.map(([ok]) => ok)).toEqual([0, 1]);
+    expect(h.pairs.al.recent).toHaveLength(1);
+    expect(Object.keys(h.pairs).sort()).toEqual(["al", "go"]);
+  });
+
+  it("doesn't time a sentence's first key, which includes reading it", () => {
+    const log = new RoundLog();
+    const round = new Round(["dad sad"]);
+    round.step(5);
+    for (const e of type(round, "dad sad")) logEvent(log, e, round.text);
+    const h = log.mergeInto(emptyHistory(), 100);
+    expect(h.letters.d.recent[0]).toEqual([1, 0]);
+    expect(h.letters.d.recent[1][1]).toBeGreaterThan(0);
+  });
+
+  it("doesn't count a wrong space bar as a fumble", () => {
+    const log = new RoundLog();
+    const round = new Round(["a b"]);
+    for (const e of type(round, "ax b")) logEvent(log, e, round.text);
+    expect(log.tricky()).toEqual([]);
+  });
+});
+
+describe("Round: capitals and punctuation", () => {
+  const CAPS = { capitals: true, punctuation: false };
+  const ALL = { capitals: true, punctuation: true };
+
+  it("lets capitals go without Shift until capitals are on", () => {
+    const round = new Round(["Hi"]);
+    expect(round.press("h", false)[0]).toMatchObject({ type: "letter", capital: false });
+    expect(round.needsShift).toBe(false);
+  });
+
+  it("needs Shift for a capital once capitals are on, and counts a slip against the letter", () => {
+    const round = new Round(["Hi"], CAPS);
+    expect(round.needsShift).toBe(true);
+    expect(round.press("h", false)).toEqual([{ type: "wrongKey", key: "h", expected: "h", wrongCase: true }]);
+    const [hit] = round.press("h", true);
+    expect(hit).toMatchObject({ type: "letter", letter: "h", capital: true, fumbled: true });
+    // A capital where a small letter belongs is wrong too (Caps Lock left on).
+    expect(round.press("i", true)[0]).toMatchObject({ type: "wrongKey", wrongCase: true });
+    expect(round.press("i", false)[0]).toMatchObject({ type: "letter", capital: false });
+  });
+
+  it("fills in punctuation until it's asked for", () => {
+    const round = new Round(["Yes, I can."], CAPS);
+    type(round, "");
+    const events = [...round.press("y", true), ...round.press("e"), ...round.press("s"), ...round.press(" "), ...round.press("i", true)];
+    expect(events.some((e) => e.type === "mark")).toBe(false);
+    expect(round.text[round.pos]).toBe(" ");
+  });
+
+  it("asks for . , ? and ' once punctuation is on, but still fills in !", () => {
+    const round = new Round(["It's me, ok? Yes!"], ALL);
+    const keys: [string, boolean][] = [["i", true], ["t", false], ["'", false], ["s", false], [" ", false], ["m", false], ["e", false], [",", false], [" ", false], ["o", false], ["k", false]];
+    for (const [k, cap] of keys) expect(round.press(k, cap)[0]?.type, k).not.toBe("wrongKey");
+    expect(round.next).toBe("?");
+    expect(round.needsShift).toBe(true);
+    expect(round.press(".")[0]).toMatchObject({ type: "wrongKey", expected: "?" });
+    expect(round.press("?")[0]).toMatchObject({ type: "mark", mark: "?", fumbled: true });
+    round.press(" ");
+    round.press("y", true);
+    round.press("e");
+    const done = round.press("s");
+    expect(done.at(-1)).toMatchObject({ type: "sentenceDone" });
+    expect(typedUnder("!", ALL)).toBe(false);
+    expect(typedUnder(".", CAPS)).toBe(false);
+    expect(typedUnder(".", ALL)).toBe(true);
+  });
+
+  it("can stop mid-sentence when time is up", () => {
+    const round = new Round(["abc", "def"]);
+    round.press("a");
+    expect(round.end()).toEqual([{ type: "roundDone" }]);
+    expect(round.over).toBe(true);
+    expect(round.next).toBeNull();
+    expect(round.press("b")).toEqual([]);
+    expect(round.end()).toEqual([]);
   });
 });

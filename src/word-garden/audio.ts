@@ -76,6 +76,27 @@ export class Sfx extends Synth {
     });
   }
 
+  /** A pointer finger settles on its bump: a quiet, low touch. */
+  fingerDown(): void {
+    this.tone(392, 392, 0.25, "sine", 0.05);
+  }
+
+  /** Both fingers are on the bumps: a soft two-note chime, and off we go. */
+  fingersReady(): void {
+    [784, 1175].forEach((f, i) => {
+      this.tone(f, f, 1.2, "sine", 0.07, i * 0.11);
+      this.tone(f * 2, f * 2, 0.5, "sine", 0.012, i * 0.11);
+    });
+  }
+
+  /** New keys unlocked: a slow, rising sparkle of bells. */
+  newKeys(): void {
+    [784, 988, 1175, 1568].forEach((f, i) => {
+      this.tone(f, f, 1.4, "sine", 0.06, i * 0.16);
+      this.tone(f * 2, f * 2, 0.6, "sine", 0.012, i * 0.16 + 0.02);
+    });
+  }
+
   /** The round is over: a short tune. */
   roundDone(): void {
     [523, 659, 784, 659, 784, 1047].forEach((f, i) => this.tone(f, f, 0.5, "sine", 0.08, i * 0.14));

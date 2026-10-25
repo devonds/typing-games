@@ -20,13 +20,13 @@ export class Synth {
     if (this.ctx.state === "suspended") void this.ctx.resume();
   }
 
-  private ready(): AudioContext | null {
+  private context(): AudioContext | null {
     return this.enabled && this.ctx && this.ctx.state === "running" ? this.ctx : null;
   }
 
   /** A note sliding from one pitch to another while it fades out. */
   protected tone(from: number, to: number, seconds: number, type: OscillatorType, volume: number, delay = 0): void {
-    const ctx = this.ready();
+    const ctx = this.context();
     if (!ctx || !this.out) return;
     const t = ctx.currentTime + delay;
     const osc = ctx.createOscillator();
@@ -43,7 +43,7 @@ export class Synth {
 
   /** A burst of hiss through a filter: low cutoffs thud, high ones swish. */
   protected noise(seconds: number, volume: number, cutoff: number, filterType: BiquadFilterType = "lowpass", delay = 0): void {
-    const ctx = this.ready();
+    const ctx = this.context();
     if (!ctx || !this.out || !this.noiseBuffer) return;
     const t = ctx.currentTime + delay;
     const src = ctx.createBufferSource();

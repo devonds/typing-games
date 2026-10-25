@@ -1,20 +1,20 @@
-// Turns Balloon Pop's events into the shared per-letter history.
-import { recordFumble, recordHit, recordMiss, recordSeen, type Stats } from "../../shared/letters";
+// Turns Balloon Pop's events into the round's log for the shared history.
+import type { RoundLog } from "../../shared/history";
 import type { GameEvent } from "./types";
 
-export function recordEvent(stats: Stats, event: GameEvent): void {
+export function logEvent(log: RoundLog, event: GameEvent): void {
   switch (event.type) {
-    case "launched":
-      recordSeen(stats, event.balloon.letter);
+    case "letter": {
+      log.hit(event.letter, event.seconds);
+      // Each letter after the first of a pair or word is also a step from the one before.
+      if (event.index > 0) log.pair(event.balloon.text[event.index - 1], event.letter, event.seconds, event.ok);
       break;
-    case "popped":
-      recordHit(stats, event.balloon.letter, event.reactionTime);
-      break;
+    }
     case "escaped":
-      recordMiss(stats, event.balloon.letter);
+      for (const letter of event.balloon.text.slice(event.balloon.typed)) log.miss(letter);
       break;
     case "wrongKey":
-      if (event.expected) recordFumble(stats, event.expected);
+      if (event.expected) log.fumble(event.expected);
       break;
   }
 }

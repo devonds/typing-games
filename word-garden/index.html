@@ -23,10 +23,89 @@
       canvas {
         display: block;
       }
+      /* "Our words": a quiet paper card over the garden. */
+      #own-words {
+        width: min(520px, 86vw);
+        border: none;
+        border-radius: 16px;
+        padding: 22px 24px 18px;
+        background: #fffaf2;
+        color: #3b3a46;
+        box-shadow: 0 10px 40px rgba(20, 15, 40, 0.35);
+        font-family: "Avenir Next", Avenir, Nunito, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+      }
+      #own-words::backdrop {
+        background: rgba(20, 15, 35, 0.45);
+      }
+      #own-words h2 {
+        margin: 0 0 4px;
+        font: italic 600 24px "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+      }
+      #own-words p {
+        margin: 0 0 12px;
+        font-size: 14px;
+        color: #7d7584;
+        line-height: 1.4;
+      }
+      #own-words textarea {
+        box-sizing: border-box;
+        width: 100%;
+        height: 180px;
+        resize: vertical;
+        padding: 10px 12px;
+        border: 1px solid rgba(160, 120, 110, 0.35);
+        border-radius: 10px;
+        background: #fff;
+        color: inherit;
+        font-size: 16px;
+        line-height: 1.45;
+        font-family: inherit;
+      }
+      #own-words textarea:focus {
+        outline: 2px solid #d9687a55;
+      }
+      #own-words .row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      #own-words .note {
+        flex: 1;
+        margin: 0;
+        font-size: 12.5px;
+      }
+      #own-words button {
+        border: none;
+        border-radius: 999px;
+        padding: 8px 18px;
+        font-size: 15px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        background: rgba(160, 120, 110, 0.15);
+        color: #3b3a46;
+      }
+      #own-words button[value="save"] {
+        background: #d9687a;
+        color: #fff;
+      }
     </style>
   </head>
   <body>
     <canvas id="game" aria-label="Word Garden, a typing game"></canvas>
+    <dialog id="own-words" aria-labelledby="own-words-title">
+      <form method="dialog">
+        <h2 id="own-words-title">Our words</h2>
+        <p>Paste this week's spelling words or a short passage. Each round types the next few lines.</p>
+        <textarea name="text" spellcheck="false" placeholder="because&#10;friend&#10;school&#10;&#10;or: The fox jumped over the log."></textarea>
+        <div class="row">
+          <p class="note">This stays on this computer.</p>
+          <button value="cancel" formnovalidate>Cancel</button>
+          <button value="save">Save</button>
+        </div>
+      </form>
+    </dialog>
     <script type="module" src="/src/word-garden/main.ts"></script>
   </body>
 </html>

@@ -68,11 +68,6 @@
         min-width: 1.8em;
         margin: 0 2px;
       }
-      header p {
-        margin: 8px 0 0;
-        color: var(--dim);
-        font-size: 18px;
-      }
       .games {
         width: min(1180px, 100%);
         display: grid;
@@ -159,6 +154,191 @@
         font-weight: 700;
         white-space: nowrap;
       }
+      .players {
+        width: min(1180px, 100%);
+        background: var(--card);
+        border: 2px solid var(--edge);
+        border-radius: 16px;
+        padding: 18px 22px 20px;
+      }
+      .players h2 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .players button {
+        font: inherit;
+        color: var(--text);
+        cursor: pointer;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 14px 6px 8px;
+        border-radius: 999px;
+        background: var(--key);
+        border: 2px solid var(--edge);
+        font-weight: 600;
+      }
+      .chip .pic {
+        font-size: 22px;
+        line-height: 1;
+      }
+      .chip.current {
+        border-color: #f4aaa2;
+        background: #3a2a3a;
+      }
+      .chip.add {
+        padding-left: 14px;
+        color: var(--dim);
+        border-style: dashed;
+      }
+      .progress {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        align-items: center;
+        gap: 6px 24px;
+        margin-top: 16px;
+      }
+      .board {
+        grid-row: span 2;
+        display: grid;
+        gap: 3px;
+        font: 600 12px/1 ui-monospace, Menlo, monospace;
+      }
+      .krow {
+        display: flex;
+        gap: 3px;
+      }
+      .k {
+        display: grid;
+        place-items: center;
+        width: 1.9em;
+        height: 1.9em;
+        border-radius: 5px;
+        border: 1px solid var(--edge);
+        color: var(--dim);
+        background: var(--bg);
+      }
+      .k.locked {
+        opacity: 0.35;
+      }
+      .k.open,
+      .k.learning {
+        color: var(--text);
+        background: linear-gradient(to top, #6fa8dc calc(var(--p, 0) * 100%), var(--key) calc(var(--p, 0) * 100%));
+      }
+      .k.learning {
+        border-color: #f4aaa2;
+      }
+      .k.done {
+        color: #16121e;
+        background: #7cc59a;
+        border-color: #7cc59a;
+      }
+      .progress ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        color: var(--dim);
+        font-size: 15px;
+      }
+      .progress li + li {
+        margin-top: 2px;
+      }
+      .players .link {
+        justify-self: start;
+        background: none;
+        border: none;
+        padding: 0;
+        color: var(--dim);
+        text-decoration: underline;
+      }
+      .player-form,
+      .confirm {
+        display: grid;
+        gap: 12px;
+        margin-top: 16px;
+        max-width: 520px;
+      }
+      .player-form input[type="text"] {
+        font: inherit;
+        padding: 8px 12px;
+        border-radius: 8px;
+        border: 2px solid var(--edge);
+        background: var(--bg);
+        color: var(--text);
+      }
+      .pics {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .pick {
+        font-size: 24px;
+        width: 44px;
+        height: 44px;
+        border-radius: 10px;
+        background: var(--key);
+        border: 2px solid var(--edge);
+      }
+      .pick.on {
+        border-color: #f4aaa2;
+        background: #3a2a3a;
+      }
+      .little {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        color: var(--dim);
+        font-size: 15px;
+      }
+      .little input {
+        margin-top: 4px;
+      }
+      .little strong {
+        color: var(--text);
+      }
+      .buttons {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .buttons button {
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: 2px solid var(--edge);
+        background: var(--key);
+        font-weight: 600;
+      }
+      .buttons .primary {
+        background: #f4aaa2;
+        border-color: #f4aaa2;
+        color: #16121e;
+      }
+      .buttons .danger {
+        border-color: #c4566f;
+        color: #ff9fb3;
+      }
+      .today {
+        margin-top: 12px;
+      }
+      .confirm p {
+        margin: 0;
+      }
+      @media (max-width: 640px) {
+        .progress {
+          grid-template-columns: 1fr;
+        }
+        .board {
+          grid-row: auto;
+        }
+      }
       footer {
         width: min(1180px, 100%);
         color: var(--dim);
@@ -177,38 +357,39 @@
     <header>
       <div class="keys" aria-hidden="true"><span>A</span><span>S</span><span>D</span><span>F</span></div>
       <h1>Typing Games</h1>
-      <p>Pick a game, then type the letters you see.</p>
     </header>
 
+    <section class="players" id="players" aria-label="Players"></section>
+
     <main class="games">
-      <a class="game balloon" href="balloon-pop/" data-key="1">
-        <canvas id="preview-balloon-pop" aria-hidden="true"></canvas>
-        <div class="about">
-          <h2>BALLOON POP</h2>
-          <p>Pop the balloons over the city before they float away.</p>
-          <span class="play">Play <kbd>1</kbd></span>
-        </div>
-      </a>
-      <a class="game fresh" href="fresh-cuts/" data-key="2">
-        <canvas id="preview-fresh-cuts" aria-hidden="true"></canvas>
-        <div class="about">
-          <h2>Fresh Cuts</h2>
-          <p>Slice the fruit flying around the grocer's. Leave the rotten ones alone!</p>
-          <span class="play">Play <kbd>2</kbd></span>
-        </div>
-      </a>
-      <a class="game garden" href="word-garden/" data-key="3">
+      <a class="game garden" href="word-garden/" data-key="1">
         <canvas id="preview-word-garden" aria-hidden="true"></canvas>
         <div class="about">
           <h2>Word Garden</h2>
           <p>Type whole sentences. Every letter blooms into flowers, butterflies, bubbles and more.</p>
+          <span class="play">Play <kbd>1</kbd></span>
+        </div>
+      </a>
+      <a class="game balloon" href="balloon-pop/" data-key="2">
+        <canvas id="preview-balloon-pop" aria-hidden="true"></canvas>
+        <div class="about">
+          <h2>BALLOON POP</h2>
+          <p>Pop the balloons over the city before they float away.</p>
+          <span class="play">Play <kbd>2</kbd></span>
+        </div>
+      </a>
+      <a class="game fresh" href="fresh-cuts/" data-key="3">
+        <canvas id="preview-fresh-cuts" aria-hidden="true"></canvas>
+        <div class="about">
+          <h2>Fresh Cuts</h2>
+          <p>Slice the fruit flying around the grocer's. Leave the rotten ones alone!</p>
           <span class="play">Play <kbd>3</kbd></span>
         </div>
       </a>
     </main>
 
     <footer>
-      <p>These typing games have no ads and no trackers. Scores and letters to practice are saved in this browser. No data is sent anywhere.</p>
+      <p>These typing games have no ads and no trackers. Players, scores and letters to practice are saved in this browser. No data is sent anywhere.</p>
       <p>View the source code and send me any requests or suggestions <a href="https://github.com/devonds/typing-games">on GitHub</a>.</p>
     </footer>
 

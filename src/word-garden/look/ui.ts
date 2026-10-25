@@ -85,6 +85,34 @@ export function drawProgress(ctx: Ctx, p: Palette, count: number, current: numbe
   }
 }
 
+/** The one-minute check's clock: a thin line along the top that fills gently, `p` 0..1. No numbers, no ticking. */
+export function drawClock(ctx: Ctx, p: Palette, progress: number, alpha = 1): void {
+  const width = 150;
+  const left = W / 2 - width / 2;
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.lineCap = "round";
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = fade(p.ink, 0.18);
+  ctx.beginPath();
+  ctx.moveTo(left, 15);
+  ctx.lineTo(left + width, 15);
+  ctx.stroke();
+  const filled = Math.max(0, Math.min(1, progress)) * width;
+  if (filled > 0) {
+    ctx.strokeStyle = fade(p.accent, 0.8);
+    ctx.beginPath();
+    ctx.moveTo(left, 15);
+    ctx.lineTo(left + filled, 15);
+    ctx.stroke();
+    ctx.fillStyle = p.accent;
+    ctx.beginPath();
+    ctx.arc(left + filled, 15, 2.4, 0, TAU);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
 /** A word of praise that swells in and fades, e.g. "Lovely!" after a sentence. */
 export function drawCheer(ctx: Ctx, p: Palette, word: string, age: number, y: number): void {
   const life = 1.7;

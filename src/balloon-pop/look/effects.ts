@@ -27,13 +27,15 @@ export class Effects {
     this.muzzles = new Array<number>(launcherCount).fill(0);
   }
 
-  pop(x: number, y: number, colour: string): void {
+  /** `letters` > 1: a wide word balloon bursts all along its width. */
+  pop(x: number, y: number, colour: string, letters = 1): void {
     this.rings.push({ x, y, age: 0 });
-    for (let i = 0; i < 16; i++) {
+    const spread = letters > 1 ? letters * 6 : 0;
+    for (let i = 0; i < 16 * Math.min(letters, 3); i++) {
       const angle = (i / 16) * Math.PI * 2 + Math.random() * 0.3;
       const speed = 30 + Math.random() * 45;
       this.particles.push({
-        x, y,
+        x: x + (Math.random() - 0.5) * 2 * spread, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed - 10,
         age: 0,
@@ -52,8 +54,16 @@ export class Effects {
   }
 
   /** The key that didn't match anything drifts down and fades. No penalty, just feedback. */
-  wrongKey(key: string): void {
-    this.texts.push({ x: W / 2, y: H - 34, text: key.toUpperCase(), colour: C.silver, age: 0, life: 0.6, vy: 16, scale: 2 });
+  wrongKey(key: string, y = H - 34): void {
+    this.texts.push({ x: W / 2, y, text: key.toUpperCase(), colour: C.silver, age: 0, life: 0.6, vy: 16, scale: 2 });
+  }
+
+  /** A fizzling key pressed again: a little grey puff where wrong letters drop, then nothing. */
+  fizz(y = H - 40): void {
+    for (let i = 0; i < 6; i++) {
+      const angle = -Math.PI / 2 + (i - 2.5) * 0.4;
+      this.particles.push({ x: W / 2, y, vx: Math.cos(angle) * 14, vy: Math.sin(angle) * 14, age: 0, life: 0.35, colour: i % 2 ? C.slate : C.silver });
+    }
   }
 
   escaped(): void {

@@ -11,6 +11,7 @@ import { Effects as FruitEffects } from "../fresh-cuts/look/effects";
 import { drawIce, drawShadow, drawWhole, lookFor } from "../fresh-cuts/look/fruit";
 import { drawStore, drawVignette } from "../fresh-cuts/look/store";
 import { drawTag } from "../fresh-cuts/look/ui";
+import { Players } from "./players";
 import * as Garden from "../word-garden/config";
 import { isTyped } from "../word-garden/game/round";
 import { Bursts } from "../word-garden/look/bursts";
@@ -248,8 +249,12 @@ if (fruitCanvas) previews.push(new FruitPreview(fruitCanvas));
 const gardenCanvas = document.querySelector<HTMLCanvasElement>("#preview-word-garden");
 if (gardenCanvas) previews.push(new GardenPreview(gardenCanvas));
 
-// Number keys pick a game, for anyone who'd rather not reach for the mouse.
+const playersRoot = document.querySelector<HTMLElement>("#players");
+if (playersRoot) new Players(playersRoot);
+
+// Number keys pick a game, for anyone who'd rather not reach for the mouse (but not while typing a name).
 addEventListener("keydown", (e) => {
+  if (e.target instanceof HTMLInputElement) return;
   const link = document.querySelector<HTMLAnchorElement>(`[data-key="${e.key}"]`);
   if (link && !e.metaKey && !e.ctrlKey && !e.altKey) location.href = link.href;
 });

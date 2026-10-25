@@ -1,6 +1,8 @@
 # Typing Games
 
-Ad-free typing games for the browser, for learning where the letters are.
+Ad-free typing games for the browser that teach children to type: which finger goes on which key, a few keys at a
+time, then words and sentences. Built on what research says makes typists (`RESEARCH-typing-pedagogy.md`; the plan
+is `PLAN-teaching.md`).
 
 - **Balloon Pop**: balloons with letters float up from little cannons over a pixel-art city. Type a letter to pop its
   balloon before it floats away. Inspired by typing.com's Type-a-Balloon (`NOTES.md`).
@@ -10,6 +12,27 @@ Ad-free typing games for the browser, for learning where the letters are.
 - **Word Garden**: type a short sentence, letter by letter, in a garden landscape. Each letter turns into something
   as you type it: a flower growing out of it, a butterfly, a soap bubble, confetti or a firework. Each kind has its own
   time of day (dawn, midday, misty morning, sunset, night), and the sky eases from one to the next.
+
+## How they teach
+
+- **Players.** Each child picks themselves on the home page ("Who's playing?"): a nickname and a picture, nothing
+  else. Progress is kept per player, in this browser only. Nothing is ever sent anywhere.
+- **Fingers on the bumps.** Every round starts with both pointer fingers held on F and J.
+- **Finger guide.** Each game shows a keyboard coloured by finger, lights the next key, and flashes the right one after
+  a slip. Help fades key by key as each is mastered.
+- **Learn path.** Keys arrive a few at a time, from F and J outward. The next keys unlock once the current ones are
+  mastered (15 recent tries, 90% right first time, at the child's usual speed). Progress shows between rounds, never
+  during play. "My keys" is the default lesson.
+- **Practice by need.** Letters, letter pairs, words and sentences come up more often the more they need practice:
+  more for errors, slow keys and new keys, and old keys come back for review. Known keys stay in the mix.
+- **Letters, then words.** Once ready, balloons and fruit carry letter pairs and short words; Word Garden is real
+  sentences, later with capitals (Shift) and punctuation.
+- **Pressure when it helps.** Things carrying keys still being learned move slowly. Mashing keys doesn't work (a wrong
+  key rests for half a second).
+- **Short and often.** "Today's practice" on the home page is about ten minutes across the three games. The home page
+  shows keys learned, a streak of days and Word Garden's one-minute speed check.
+- **Little hands.** A per-player setting for children under about 7: no time pressure, finger guide always on,
+  accuracy only, short words, stars instead of scores.
 
 ## Play
 
@@ -33,34 +56,23 @@ you switch tabs. Clicking works too.
 
 ## Settings (in each game's menu)
 
-Balloon Pop and Fresh Cuts:
+Every game's menu has **Player** (switch between players; add them on the home page), **Little hands**, **Finger
+guide** (Automatic, which fades with mastery / Always / Off) and **Sound**. Then:
 
-| Setting      | Options |
-|--------------|---------|
-| Lesson       | All letters, Home row, Top row, Bottom row, Weak letters |
-| Level        | Easy, Medium, Hard |
-| Speed        | Speeds up during a round, or Steady |
-| Rotten fruit | On / Off (Fresh Cuts only) |
-| Sound        | On / Off |
+| Setting           | Balloon Pop | Fresh Cuts | Word Garden |
+|-------------------|-------------|------------|-------------|
+| Lesson / Focus    | My keys, All letters, Home row, Top row, Bottom row, Tricky letters | same | same, plus Our words (a parent's own text) |
+| Level             | Easy, Medium, Hard | Easy, Medium, Hard | Sentences: Short, Longer |
+| Speed             | Steady or Speeds up | Speeds up or Steady | – |
+| Round             | 5 lives or 2 minutes | 5 baskets or 2 minutes | 5 or 10 sentences, or a 1-minute check |
+| Other             | – | Rotten fruit on/off | Letters turn into: Surprise me, Flowers, Butterflies, Bubbles, Confetti, Fireworks |
 
-Word Garden:
-
-| Setting           | Options |
-|-------------------|---------|
-| Focus             | All letters, Home row, Top row, Bottom row, Weak letters: favours sentences full of those letters |
-| Sentences         | Short, Longer |
-| Round             | 5 or 10 sentences |
-| Letters turn into | Surprise me (a different kind each sentence), Flowers, Butterflies, Bubbles, Confetti, Fireworks |
-| Sound             | On / Off |
-
-Wrong keys never cost points. "Weak letters" becomes available after a few rounds: it picks the letters that most
-often get away, get fumbled, or are slow to hit. All the games share that letter history, so a round of any of them
-counts. Everything is saved in this browser only.
+Wrong keys never cost points.
 
 ## Develop
 
 ```sh
-npm test           # rules + letter history tests
+npm test           # rules, history, need, Learn path, profiles...
 npm run typecheck
 ```
 

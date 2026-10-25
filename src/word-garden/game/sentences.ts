@@ -1,7 +1,12 @@
-// The sentences to type, and how a round's sentences are picked.
+// The sentences to type, and how a round's sentences are picked: by need, leaning towards the lesson's letters. For
+// "My keys", only sentences made of unlocked keys; when too few fit, short phrases from the word bank, and at the
+// very start (just F J D K) letter groups, the way typing courses begin. No browser APIs: all of it is tested.
 // Plain words a young reader knows. Only letters, spaces and . , ! ? ' (punctuation is filled in for you).
 // A few are made almost entirely of home-row or top-row letters, so the Focus setting has something to find.
-import { FOCUS, type Level } from "../config";
+import type { History } from "../../shared/history";
+import { pickWeighted, textNeed, type NeedOptions } from "../../shared/practice";
+import { wordsWithin } from "../../shared/words";
+import { FOCUS, PHRASES, type Level } from "../config";
 
 const SHORT = [
   // Home row heavy
@@ -144,38 +149,146 @@ export function lettersOf(sentence: string): string[] {
   return [...sentence.toLowerCase()].filter((c) => c >= "a" && c <= "z");
 }
 
-/** How much of a sentence is made of the focus letters, 0..1. */
-export function focusShare(sentence: string, focus: readonly string[]): number {
-  const letters = lettersOf(sentence);
-  if (letters.length === 0) return 0;
-  const set = new Set(focus);
-  return letters.filter((l) => set.has(l)).length / letters.length;
+/** True if every letter in the text is one of `keys`. */
+export function fitsKeys(text: string, keys: Iterable<string>): boolean {
+  const set = new Set(keys);
+  return lettersOf(text).every((c) => set.has(c));
 }
 
 /**
- * Pick `count` different sentences. With focus letters, sentences full of them are much more likely; without,
- * every sentence is equally likely. Sentences in `recent` (last round's) are less likely to come straight back.
+ * How much a sentence leans on the lesson's letters: each letter counts its share of the lesson's weights (1 for a
+ * letter at an even share, more for a needier one, 0 for a letter outside the lesson), averaged over the sentence.
+ */
+export function lessonLean(sentence: string, weights: ReadonlyMap<string, number>): number {
+  const letters = lettersOf(sentence);
+  if (letters.length === 0) return 0;
+  return letters.reduce((sum, l) => sum + (weights.get(l) ?? 0) * weights.size, 0) / letters.length;
+}
+
+/** A sentence's weight: its need (letters and pairs, from the history), times how much it leans on the lesson. */
+export function sentenceWeight(weights: ReadonlyMap<string, number>, history: History, o: NeedOptions): (s: string) => number {
+  return (s) => textNeed(s, history, o) * (FOCUS.floor + lessonLean(s, weights)) ** FOCUS.power;
+}
+
+/**
+ * Pick `count` different sentences, each chosen with chance in proportion to `weight`. Sentences in `recent` (last
+ * round's) are less likely to come straight back.
  */
 export function pickSentences(
   bank: readonly string[],
   count: number,
-  focus: readonly string[] | null,
+  weight: (s: string) => number,
   recent: readonly string[] = [],
   random: () => number = Math.random,
 ): string[] {
   const recentSet = new Set(recent);
-  const pool = bank.map((s) => ({
-    s,
-    weight:
-      (focus ? FOCUS.floor + focusShare(s, focus) ** FOCUS.power : 1) * (recentSet.has(s) ? FOCUS.recentPenalty : 1),
-  }));
+  const pool = [...bank];
   const picked: string[] = [];
   while (picked.length < count && pool.length > 0) {
-    const total = pool.reduce((sum, p) => sum + p.weight, 0);
-    let r = random() * total;
-    let i = 0;
-    while (i < pool.length - 1 && r >= pool[i].weight) r -= pool[i++].weight;
-    picked.push(pool.splice(i, 1)[0].s);
+    const s = pickWeighted(pool, (x) => weight(x) * (recentSet.has(x) ? FOCUS.recentPenalty : 1), random)!;
+    picked.push(s);
+    pool.splice(pool.indexOf(s), 1);
   }
   return picked;
+}
+
+const between = (min: number, max: number, random: () => number): number => min + Math.floor(random() * (max - min + 1));
+
+/** "Dad has a flask." from a few words chosen by need, short enough for one line. */
+export function buildPhrase(words: readonly string[], maxLength: number, history: History, o: NeedOptions, random: () => number): string {
+  const want = between(PHRASES.minWords, PHRASES.maxWords, random);
+  const chosen: string[] = [];
+  let length = 0;
+  while (chosen.length < want) {
+    const fits = (w: string) => !chosen.includes(w) && length + w.length + (chosen.length ? 1 : 0) + 1 <= maxLength;
+    const word = pickWeighted(words, (w) => textNeed(w, history, o), random, (w) => !fits(w));
+    if (!word || !fits(word)) break;
+    chosen.push(word);
+    length += word.length + (chosen.length > 1 ? 1 : 0);
+  }
+  const text = chosen.join(" ");
+  return text.charAt(0).toUpperCase() + text.slice(1) + ".";
+}
+
+/** A line of letter groups like "fff jjj fj jf" or "dkd kdk fjdk", the letters chosen by `weights`. */
+export function letterGroups(weights: ReadonlyMap<string, number>, random: () => number): string {
+  const keys = [...weights.keys()];
+  const letter = (avoid?: string) => pickWeighted(keys, (k) => weights.get(k) ?? 0, random, (k) => k === avoid)!;
+  const [shortest, longest] = PHRASES.groupLength;
+  const groups: string[] = [];
+  const count = between(PHRASES.minGroups, PHRASES.maxGroups, random);
+  while (groups.length < count) {
+    const a = letter();
+    const b = letter(a);
+    const kind = Math.floor(random() * 4);
+    const group =
+      kind === 0
+        ? a.repeat(3) // fff
+        : kind === 1
+          ? a + b // fj
+          : kind === 2
+            ? a + b + a // fjf
+            : Array.from({ length: between(shortest, longest, random) }, (_, i) => (i === 0 ? a : letter())).join(""); // fjdk
+    // Two of the same group in a row reads like a mistake.
+    if (group !== groups[groups.length - 1]) groups.push(group);
+  }
+  return groups.join(" ");
+}
+
+export interface RoundPlan {
+  level: Level;
+  count: number;
+  /** The lesson's keys and how often each should come up (from Player.practice). */
+  keys: readonly string[];
+  weights: ReadonlyMap<string, number>;
+  /** "My keys": only text made of `keys`. */
+  onlyKeys: boolean;
+  history: History;
+  need: NeedOptions;
+  recent?: readonly string[];
+  random?: () => number;
+}
+
+/**
+ * A round's sentences. For "My keys", sentences made only of unlocked keys, topped up with phrases from the word
+ * bank (or letter groups, when even words don't fit yet), in a shuffled order.
+ */
+export function planRound(plan: RoundPlan): string[] {
+  const random = plan.random ?? Math.random;
+  const bank = plan.onlyKeys ? SENTENCES[plan.level].filter((s) => fitsKeys(s, plan.keys)) : SENTENCES[plan.level];
+  const weight = sentenceWeight(plan.weights, plan.history, plan.need);
+  // With only a handful of sentences to choose from, use half of them at most, so rounds don't all look alike.
+  const wanted = plan.onlyKeys ? Math.min(plan.count, Math.ceil(bank.length / 2)) : plan.count;
+  const picked = pickSentences(bank, wanted, weight, plan.recent, random);
+  if (picked.length >= plan.count) return picked;
+
+  const words = wordsWithin(plan.keys, 1, 7);
+  const make = words.length >= PHRASES.minBank
+    ? () => buildPhrase(words, PHRASES.maxLength[plan.level], plan.history, plan.need, random)
+    : () => letterGroups(plan.weights, random);
+  const made: string[] = [];
+  // A few tries for each, so the round doesn't repeat itself; a small word bank may have to.
+  for (let tries = 0; picked.length + made.length < plan.count; tries++) {
+    const text = make();
+    if (tries > 30 || !(picked.includes(text) || made.includes(text))) made.push(text);
+  }
+  const all = [...picked, ...made];
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [all[i], all[j]] = [all[j], all[i]];
+  }
+  return all;
+}
+
+/**
+ * The one-minute check: the whole bank in a fresh random order, not weighted by need (so checks compare fairly over
+ * time), with last round's sentences left out.
+ */
+export function checkSentences(level: Level, recent: readonly string[] = [], random: () => number = Math.random): string[] {
+  const fresh = SENTENCES[level].filter((s) => !recent.includes(s));
+  for (let i = fresh.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
+  }
+  return fresh;
 }

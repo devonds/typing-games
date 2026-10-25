@@ -17,6 +17,18 @@ export class Sfx extends Synth {
     this.tone(520 + lift, 900 + lift, 0.06, "sine", 0.08, 0.02);
   }
 
+  /** A letter into a pair or word: a short, bright snick, rising with each letter. */
+  nick(index: number): void {
+    this.noise(0.05, 0.12, 4500, "highpass");
+    const f = 660 + Math.min(index, 6) * 90;
+    this.tone(f, f * 1.1, 0.05, "sine", 0.06);
+  }
+
+  /** A whole word sliced: a little flourish on top of the slice. */
+  wordDone(): void {
+    [784, 988, 1175].forEach((f, i) => this.tone(f, f, 0.1, "triangle", 0.08, 0.05 + i * 0.05));
+  }
+
   /** Squelch and a buzz: you sliced the rotten one. */
   yuck(): void {
     this.noise(0.25, 0.25, 500);
@@ -58,6 +70,23 @@ export class Sfx extends Synth {
 
   gameOver(): void {
     [523, 440, 349, 262].forEach((f, i) => this.tone(f, f * 0.98, 0.18, "triangle", 0.2, i * 0.18));
+  }
+
+  /** Both fingers on the bumps: a soft, warm two-note chime, and the round begins. */
+  fingersReady(): void {
+    this.tone(659, 659, 0.16, "sine", 0.09);
+    this.tone(988, 988, 0.3, "sine", 0.08, 0.09);
+    this.tone(330, 330, 0.3, "triangle", 0.05, 0.09);
+  }
+
+  /** A wrong key pressed again too soon: the softest little puff, so it doesn't feel like a telling-off. */
+  fizzle(): void {
+    this.noise(0.08, 0.05, 1800, "bandpass");
+  }
+
+  /** A little hands round is done: a happy rising arpeggio. */
+  allDone(): void {
+    [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, f, 0.14, "triangle", 0.11, i * 0.08));
   }
 
   click(): void {

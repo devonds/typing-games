@@ -37,13 +37,16 @@ export class Words {
   private shake = 0;
   private t = 0;
 
-  constructor(readonly text: string) {
+  /** `big`: bigger letters, for little hands. */
+  constructor(readonly text: string, big = false) {
     const ctx = measure();
     // As big as possible, up to the maximum, on one line.
-    let size = SENTENCE.maxSize;
+    const max = big ? SENTENCE.littleMaxSize : SENTENCE.maxSize;
+    const min = big ? SENTENCE.littleMinSize : SENTENCE.minSize;
+    let size = max;
     ctx.font = `600 ${size}px ${SANS}`;
     const width = ctx.measureText(text).width;
-    if (width > SENTENCE.maxWidth) size = Math.max(SENTENCE.minSize, Math.floor((size * SENTENCE.maxWidth) / width));
+    if (width > SENTENCE.maxWidth) size = Math.max(min, Math.floor((size * SENTENCE.maxWidth) / width));
     this.size = size;
     this.font = `600 ${size}px ${SANS}`;
     ctx.font = this.font;

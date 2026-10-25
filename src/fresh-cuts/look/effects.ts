@@ -44,6 +44,8 @@ interface Streak {
   y: number;
   angle: number;
   age: number;
+  /** Length, 1 = a full slice. */
+  size: number;
 }
 
 interface Word {
@@ -69,8 +71,8 @@ export class Effects {
   private bannerText = "";
   private bannerLeft = 0;
 
-  /** Cut a fruit in two along a random diagonal, with a splash of juice. */
-  slice(fruit: Fruit, random = Math.random): void {
+  /** Cut a fruit in two along a random diagonal, with a splash of juice. `big` (a word) cuts with a flourish. */
+  slice(fruit: Fruit, random = Math.random, big = false): void {
     const look = lookFor(fruit.kind, fruit.rotten);
     const angle = -0.55 + (random() - 0.5) * 1.3;
     const nx = -Math.sin(angle);
@@ -88,9 +90,9 @@ export class Effects {
         side,
       });
     }
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < (big ? 34 : 18); i++) {
       const a = random() * TAU;
-      const speed = 50 + random() * 130;
+      const speed = (50 + random() * 130) * (big ? 1.3 : 1);
       this.drops.push({
         x: fruit.x,
         y: fruit.y,
@@ -118,7 +120,21 @@ export class Effects {
       }
     }
     this.bursts.push({ x: fruit.x, y: fruit.y, colour: fruit.frozen ? "#cfeeff" : look.juice, age: 0, seed: random() * 100, stinky: fruit.rotten });
-    this.streaks.push({ x: fruit.x, y: fruit.y, angle, age: 0 });
+    this.streaks.push({ x: fruit.x, y: fruit.y, angle, age: 0, size: 1 });
+    // A word ends with a second cut across the first.
+    if (big) this.streaks.push({ x: fruit.x, y: fruit.y, angle: angle + 1.4, age: -0.06, size: 1.1 });
+  }
+
+  /** One letter of a pair or word: a little nick in the fruit and a few drops of juice, but it stays whole. */
+  nick(fruit: Fruit, random = Math.random): void {
+    const look = lookFor(fruit.kind, fruit.rotten);
+    const angle = (random() - 0.5) * 2.4;
+    for (let i = 0; i < 7; i++) {
+      const a = angle - Math.PI / 2 + (random() - 0.5) * 1.6;
+      const speed = 40 + random() * 70;
+      this.drops.push({ x: fruit.x, y: fruit.y, vx: Math.cos(a) * speed + fruit.vx, vy: Math.sin(a) * speed, r: 0.7 + random() * 1.1, colour: look.juice, life: 0.35 + random() * 0.25 });
+    }
+    this.streaks.push({ x: fruit.x + (random() - 0.5) * 10, y: fruit.y + (random() - 0.5) * 8, angle, age: 0, size: 0.4 });
   }
 
   word(s: string, x: number, y: number, big = false): void {
@@ -176,7 +192,7 @@ export class Effects {
       ctx.fill();
     }
     ctx.globalAlpha = 1;
-    for (const s of this.streaks) drawStreak(ctx, s);
+    for (const s of this.streaks) if (s.age >= 0) drawStreak(ctx, s);
   }
 
   /** Words and the banner go on top of everything. */
@@ -225,8 +241,8 @@ function drawStinkPuff(ctx: Ctx, b: Burst): void {
 /** A bright, tapered blade-stroke through the fruit. */
 function drawStreak(ctx: Ctx, s: Streak): void {
   const k = 1 - s.age / STREAK_TIME;
-  const len = 46 + 20 * (1 - k);
-  const w = 3.2 * k;
+  const len = (46 + 20 * (1 - k)) * s.size;
+  const w = 3.2 * k * Math.sqrt(s.size);
   ctx.save();
   ctx.translate(s.x, s.y);
   ctx.rotate(s.angle);

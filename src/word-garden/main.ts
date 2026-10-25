@@ -1,9 +1,10 @@
 // Boots the game: canvas, input, sound, saved data, the scene switcher and the main loop.
-import { Input, NO_INPUT } from "../shared/input";
-import { mergeRound, type Stats } from "../shared/letters";
-import { loadLetterHistory, saveLetterHistory } from "../shared/storage";
+import type { RoundLog } from "../shared/history";
+import { Input, spent } from "../shared/input";
+import { Player } from "../shared/player";
+import { listProfiles, setCurrent, updateProfile } from "../shared/profiles";
 import { Sfx } from "./audio";
-import { H, W } from "./config";
+import { H, OWN, W } from "./config";
 import { MenuScene } from "./scenes/menu";
 import { PlayScene } from "./scenes/play";
 import { ResultsScene } from "./scenes/results";
@@ -25,34 +26,73 @@ function fit(): void {
 addEventListener("resize", fit);
 fit();
 
+// "Our words": a dialog over the canvas. Keys typed in it belong to the text box, not the game, which listens on
+// window, so they stop at the dialog. Esc still closes it (the browser's own dialog behaviour).
+const ownDialog = document.getElementById("own-words") as HTMLDialogElement;
+const ownText = ownDialog.querySelector("textarea")!;
+for (const type of ["keydown", "keyup", "keypress"]) ownDialog.addEventListener(type, (e) => e.stopPropagation());
+
 const sfx = new Sfx();
 const input = new Input(canvas, { width: W, height: H }, () => sfx.unlock());
 let scene: Scene;
 
 class Game implements App {
-  readonly settings = storage.loadSettings();
+  player = new Player();
+  settings = storage.loadSettings(this.player);
   readonly sfx = sfx;
   recent: string[] = [];
-  private history: Stats = loadLetterHistory();
-  private best = storage.loadBest();
+  private best = storage.loadBest(this.player);
 
   constructor() {
     sfx.enabled = this.settings.sound;
   }
 
-  get stats(): Stats {
-    return this.history;
-  }
-
-  saveSettings(): void {
-    storage.saveSettings(this.settings);
+  /** Load whoever is playing now, with their own settings and best scores. */
+  private reload(): void {
+    this.player = new Player();
+    this.settings = storage.loadSettings(this.player);
+    this.best = storage.loadBest(this.player);
+    this.recent = [];
     sfx.enabled = this.settings.sound;
   }
 
-  finishRound(round: Stats): void {
-    if (Object.keys(round).length === 0) return;
-    this.history = mergeRound(this.history, round);
-    saveLetterHistory(this.history);
+  saveSettings(): void {
+    storage.saveSettings(this.player, this.settings);
+    sfx.enabled = this.settings.sound;
+  }
+
+  switchPlayer(step: number): void {
+    const profiles = listProfiles();
+    if (profiles.length < 2) return;
+    const i = profiles.findIndex((p) => p.id === this.player.profile.id);
+    setCurrent(profiles[(i + step + profiles.length) % profiles.length].id);
+    this.reload();
+  }
+
+  setLittleHands(on: boolean): void {
+    updateProfile(this.player.profile.id, { littleHands: on });
+    this.reload();
+  }
+
+  editOwnWords(): void {
+    if (ownDialog.open) return;
+    const player = this.player;
+    ownText.value = storage.loadOwn(player).text;
+    ownDialog.returnValue = "";
+    ownDialog.addEventListener(
+      "close",
+      () => {
+        if (ownDialog.returnValue === "save") storage.saveOwn(player, { text: ownText.value.slice(0, OWN.maxText), next: 0 });
+        canvas.focus();
+      },
+      { once: true },
+    );
+    ownDialog.showModal();
+    ownText.focus();
+  }
+
+  finishRound(log: RoundLog, seconds: number): { unlocked: string[] } {
+    return this.player.finishRound(log, seconds);
   }
 
   submitWpm(wpm: number): number {
@@ -60,7 +100,7 @@ class Game implements App {
     const before = this.best[key] ?? 0;
     if (wpm > before) {
       this.best[key] = wpm;
-      storage.saveBest(this.best);
+      storage.saveBest(this.player, this.best);
     }
     return before;
   }
@@ -96,7 +136,7 @@ function frame(now: number): void {
     let frameInput = input.drain();
     while (backlog >= STEP) {
       scene.update(STEP, frameInput);
-      frameInput = NO_INPUT;
+      frameInput = spent(frameInput);
       backlog -= STEP;
     }
   }

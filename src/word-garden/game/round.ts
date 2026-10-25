@@ -1,9 +1,32 @@
 // The rules of a round: a few sentences, typed one letter at a time. No drawing and no browser APIs.
-// Punctuation is typed for you and capitals don't need shift: this is about finding the letters.
+// At first punctuation is typed for you and capitals don't need Shift: this is about finding the letters. Once a
+// child has learned every letter, capitals need Shift; after that, . , ? and ' must be typed too ("!" is always
+// filled in: it's up on the number row).
 import type { RoundEvent } from "./types";
 
-/** Letters and spaces are typed; everything else (. , ! ? ') is filled in automatically. */
-export const isTyped = (c: string): boolean => c === " " || /[a-z]/i.test(c);
+/** What a round asks for beyond the letters and the space bar. */
+export interface Rules {
+  /** Capitals need Shift, and a capital where a small letter belongs is a wrong key. */
+  capitals: boolean;
+  /** . , ? and ' are typed rather than filled in. */
+  punctuation: boolean;
+}
+
+export const LETTERS_ONLY: Rules = { capitals: false, punctuation: false };
+
+/** The punctuation a child can be asked to type. */
+export const TYPED_MARKS = ".,?'";
+
+/** Whether a character is typed (rather than filled in) under these rules. */
+export function typedUnder(c: string, rules: Rules): boolean {
+  return c === " " || /[a-z]/i.test(c) || (rules.punctuation && TYPED_MARKS.includes(c));
+}
+
+/** Letters and spaces are typed; everything else (. , ! ? ') is filled in automatically, until the rules say. */
+export const isTyped = (c: string): boolean => typedUnder(c, LETTERS_ONLY);
+
+const isLetter = (c: string): boolean => /^[a-z]$/i.test(c);
+const isCapital = (c: string): boolean => /^[A-Z]$/.test(c);
 
 export class Round {
   /** Which sentence we're on. */
@@ -25,7 +48,10 @@ export class Round {
   private sinceLast = 0;
   private fumbled = false;
 
-  constructor(readonly sentences: readonly string[]) {
+  constructor(
+    readonly sentences: readonly string[],
+    readonly rules: Rules = LETTERS_ONLY,
+  ) {
     if (sentences.length === 0) throw new Error("Round needs at least one sentence");
     this.skipPunctuation();
   }
@@ -56,23 +82,34 @@ export class Round {
     if (this.started) this.typingTime += dt;
   }
 
-  /** `key` is a lowercase letter or " ". */
-  press(key: string): RoundEvent[] {
+  /** Whether the next character needs Shift: a capital, or "?". */
+  get needsShift(): boolean {
+    const next = this.next;
+    return next !== null && ((this.rules.capitals && isCapital(next)) || next === "?");
+  }
+
+  /** `key` is a lowercase letter, " " or a punctuation key; `capital` if a letter was typed with Shift (or Caps Lock). */
+  press(key: string, capital = false): RoundEvent[] {
     const expected = this.next;
     if (expected === null) return [];
-    if (key !== expected.toLowerCase()) {
+    const rightKey = key === expected.toLowerCase();
+    const rightCase = !this.rules.capitals || !isLetter(expected) || capital === isCapital(expected);
+    if (!rightKey || !rightCase) {
       this.wrongKeys += 1;
       this.mistakes += 1;
       this.fumbled = true;
-      return [{ type: "wrongKey", key, expected: expected.toLowerCase() }];
+      return [{ type: "wrongKey", key, expected: expected.toLowerCase(), wrongCase: rightKey }];
     }
+    const timed = this.started;
     this.started = true;
     this.correct += 1;
     const index = this.pos;
     const events: RoundEvent[] = [
       key === " "
         ? { type: "space", index }
-        : { type: "letter", index, letter: key, reactionTime: this.sinceLast, fumbled: this.fumbled },
+        : isLetter(expected)
+          ? { type: "letter", index, letter: key, reactionTime: this.sinceLast, fumbled: this.fumbled, timed, capital: this.rules.capitals && isCapital(expected) }
+          : { type: "mark", index, mark: expected, fumbled: this.fumbled },
     ];
     this.sinceLast = 0;
     this.fumbled = false;
@@ -83,6 +120,14 @@ export class Round {
       events.push({ type: "sentenceDone", sentence: this.sentence, mistakes: this.mistakes });
     }
     return events;
+  }
+
+  /** Stop where we are, mid-sentence if need be (the one-minute check's time is up). */
+  end(): RoundEvent[] {
+    if (this.over) return [];
+    this.over = true;
+    this.waiting = false;
+    return [{ type: "roundDone" }];
   }
 
   /** Move on after a finished sentence. Called by the scene once the celebration is over. */
@@ -104,6 +149,6 @@ export class Round {
   }
 
   private skipPunctuation(): void {
-    while (this.pos < this.text.length && !isTyped(this.text[this.pos])) this.pos += 1;
+    while (this.pos < this.text.length && !typedUnder(this.text[this.pos], this.rules)) this.pos += 1;
   }
 }

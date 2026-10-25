@@ -1,16 +1,17 @@
 // Boots the game: canvas, input, sound, saved data, the scene switcher and the main loop.
 import { Sfx } from "./audio";
-import { H, W } from "./config";
-import { Input, NO_INPUT } from "../shared/input";
-import { lettersFor } from "../shared/lessons";
-import { mergeRound, type Stats } from "../shared/letters";
-import { loadLetterHistory, saveLetterHistory } from "../shared/storage";
+import { H, ROUND_SECONDS, W } from "./config";
+import { Input, spent } from "../shared/input";
+import type { RoundLog } from "../shared/history";
+import { Player } from "../shared/player";
+import { setCurrent, updateProfile } from "../shared/profiles";
+import { currentSession, finishStep, gameUrl, stepFor, type GameId, type Step } from "../shared/session";
 import { Pixels } from "./look/pixels";
 import type { Scenery } from "./look/scenery";
 import { MenuScene } from "./scenes/menu";
 import { PlayScene } from "./scenes/play";
 import { ResultsScene } from "./scenes/results";
-import type { App, RoundResult, Scene } from "./scenes/scene";
+import type { App, Round, RoundResult, Scene } from "./scenes/scene";
 import * as storage from "./storage";
 
 const canvas = document.getElementById("game") as HTMLCanvasElement;
@@ -32,38 +33,47 @@ const sfx = new Sfx();
 const input = new Input(canvas, { width: W, height: H }, () => sfx.unlock());
 let scene: Scene;
 
+const GAME: GameId = "balloon-pop";
+
 class Game implements App {
-  readonly settings = storage.loadSettings();
+  player = new Player();
+  settings = storage.loadSettings(this.player);
   readonly sfx = sfx;
-  private history: Stats = loadLetterHistory();
-  private best = storage.loadBest();
+  private best = storage.loadBest(this.player);
 
   constructor() {
     sfx.enabled = this.settings.sound;
   }
 
-  get stats(): Stats {
-    return this.history;
-  }
-
   saveSettings(): void {
-    storage.saveSettings(this.settings);
+    storage.saveSettings(this.player, this.settings);
     sfx.enabled = this.settings.sound;
   }
 
-  finishRound(round: Stats): void {
-    if (Object.keys(round).length === 0) return;
-    this.history = mergeRound(this.history, round);
-    saveLetterHistory(this.history);
+  switchPlayer(id: string): void {
+    setCurrent(id);
+    this.player = new Player();
+    this.settings = storage.loadSettings(this.player);
+    this.best = storage.loadBest(this.player);
+    sfx.enabled = this.settings.sound;
   }
 
-  submitScore(score: number): number {
-    const { lesson, difficulty, speedMode } = this.settings;
-    const key = `${lesson}/${difficulty}/${speedMode}`;
+  setLittleHands(on: boolean): void {
+    updateProfile(this.player.profile.id, { littleHands: on });
+    this.switchPlayer(this.player.profile.id);
+  }
+
+  finishRound(log: RoundLog, seconds: number): { unlocked: string[] } {
+    return this.player.finishRound(log, seconds);
+  }
+
+  submitScore(score: number, round: Round): number {
+    const { difficulty, speedMode } = this.settings;
+    const key = `${round.lesson}/${difficulty}/${speedMode}` + (round.seconds ? `/${round.seconds}s` : "");
     const before = this.best[key] ?? 0;
     if (score > before) {
       this.best[key] = score;
-      storage.saveBest(this.best);
+      storage.saveBest(this.player, this.best);
     }
     return before;
   }
@@ -72,10 +82,32 @@ class Game implements App {
     scene = new MenuScene(this);
   }
 
+  /** Start a round: Today's practice step if it's this game's turn, otherwise the menu's settings. */
   startGame(): void {
-    const letters = lettersFor(this.settings.lesson, this.history);
-    if (!letters) return this.showMenu(); // "weak letters" without enough history; the menu explains
-    scene = new PlayScene(this, letters);
+    const { player, settings } = this;
+    const step = stepFor(player.profile.id, player.today, GAME);
+    const session = step ? currentSession(player.profile.id, player.today) : null;
+    let lesson = step?.lesson ?? settings.lesson;
+    let practice = player.practice(lesson);
+    if (!practice && step) practice = player.practice((lesson = "mine")); // tricky letters need some history first
+    if (!practice) return this.showMenu(); // Tricky letters without enough history; the menu explains
+    // Little hands keep their 20-balloon rounds, in a session too.
+    const seconds = player.littleHands ? null : step ? step.length : settings.length === "timed" ? ROUND_SECONDS : null;
+    const round: Round = {
+      lesson,
+      seconds,
+      step,
+      stepLabel: session ? `${session.at + 1} OF ${session.steps.length}` : null,
+    };
+    scene = new PlayScene(this, practice, round);
+  }
+
+  finishStep(): Step | null {
+    return finishStep(this.player.profile.id, this.player.today, GAME);
+  }
+
+  openGame(game: GameId): void {
+    location.href = gameUrl(game);
   }
 
   showResults(result: RoundResult, scenery: Scenery): void {
@@ -101,7 +133,7 @@ function frame(now: number): void {
     let frameInput = input.drain();
     while (backlog >= STEP) {
       scene.update(STEP, frameInput);
-      frameInput = NO_INPUT;
+      frameInput = spent(frameInput);
       backlog -= STEP;
     }
   }

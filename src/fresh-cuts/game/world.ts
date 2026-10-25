@@ -1,14 +1,20 @@
 // The rules of the game. No drawing and no browser APIs: just numbers in, events out.
+import { pickWeighted } from "../../shared/practice";
+import { press } from "../../shared/units";
 import {
   COMBO,
   DIFFICULTIES,
+  FIZZLE_SECONDS,
   FREEZE,
   FRUIT_KINDS,
   LAUNCH,
+  LITTLE_HANDS,
   LIVES,
   POINTS_PER_SLICE,
   RAMP,
   ROTTEN,
+  SEQUENCE_BONUS,
+  TIMED,
   W,
   WAVE,
   type Difficulty,
@@ -18,11 +24,31 @@ import {
 import type { Fruit, GameEvent } from "./types";
 
 export interface WorldOptions {
-  letters: readonly string[];
+  /** The keys in play... */
+  keys: readonly string[];
+  /** ...and how often each comes up (the player's need for it). Without weights, all come up equally. */
+  weights?: ReadonlyMap<string, number>;
   difficulty: Difficulty;
   speedMode: SpeedMode;
   /** Throw the odd rotten apple, which shouldn't be sliced. */
   rotten: boolean;
+  /** How fast fruit carrying a letter flies, 0..1 of full speed: keys still being learned come slower. Default 1. */
+  pace?: (letter: string) => number;
+  /** A wrong key does nothing for FIZZLE_SECONDS (default on). */
+  fizzle?: boolean;
+  /**
+   * Little hands: no time pressure. Fresh fruit hangs at the top of its throw until it's sliced, so no basket is ever
+   * lost; no rotten fruit; and the round ends once LITTLE_HANDS.fruit fresh fruit have been thrown and sliced.
+   */
+  littleHands?: boolean;
+  /**
+   * What a fresh fruit carries: a letter, pair or word whose first letter isn't in `inUse` (the first letters already
+   * in the air), or null. Defaults to single letters from `keys`, weighted. Rotten and frozen fruit always carry one
+   * letter.
+   */
+  pick?: (inUse: ReadonlySet<string>) => string | null;
+  /** A timed round: it ends after this many seconds, and a dropped fruit costs points instead of a basket. */
+  seconds?: number;
   /** Returns a number in [0, 1). Defaults to Math.random; tests pass a seeded one. */
   random?: () => number;
 }
@@ -32,7 +58,11 @@ export class World {
   time = 0;
   score = 0;
   lives = LIVES;
+  /** Fruit sliced right through. */
   sliced = 0;
+  /** Right keys, and how many of those came with no wrong key while they were wanted. */
+  lettersTyped = 0;
+  firstTry = 0;
   wrongKeys = 0;
   over = false;
   wave = 0;
@@ -50,18 +80,71 @@ export class World {
   private clock = 0;
   private nextWaveAt = WAVE.firstAt;
   private lastSliceAt = -Infinity;
+  /** The last right key: combos chain while keys keep coming quickly, even across a long word. */
+  private lastProgressAt = -Infinity;
+  /** The pair or word being typed: the following keys must continue it. */
+  private locked: Fruit | null = null;
+  /** A wrong key came since the last right one. */
+  private slipped = false;
   private readonly random: () => number;
   private kinds: FruitKindName[] = [];
   private nextId = 1;
+  /** Keys that were just wrong, and when they work again. */
+  private readonly fizzling = new Map<string, number>();
+  /** Little hands: fresh fruit thrown so far this round. */
+  private freshThrown = 0;
 
   constructor(private readonly options: WorldOptions) {
-    if (options.letters.length === 0) throw new Error("World needs at least one letter");
+    if (options.keys.length === 0) throw new Error("World needs at least one key");
     this.random = options.random ?? Math.random;
   }
 
   /** Fruit in the air, in the order it was thrown. */
   get fruit(): readonly Fruit[] {
     return this.live;
+  }
+
+  /**
+   * The letter to type next: the locked pair or word's next letter, or the first letter of the oldest fruit that
+   * should be sliced (not rotten, not frozen), or null.
+   */
+  get target(): string | null {
+    const f = this.targetFruit;
+    return f ? f.letter[f.typed ?? 0] : null;
+  }
+
+  /** The pair or word being typed, if any. */
+  get lockedFruit(): Fruit | null {
+    return this.locked;
+  }
+
+  private get targetFruit(): Fruit | undefined {
+    return this.locked ?? this.live.find((f) => !f.rotten && !f.frozen);
+  }
+
+  /** Seconds left of a timed round, or null. */
+  get timeLeft(): number | null {
+    return this.options.seconds === undefined ? null : Math.max(0, this.options.seconds - this.time);
+  }
+
+  /** Keys fizzling after a wrong press, each with the share of its rest still to go (1 -> 0). */
+  get cooling(): Map<string, number> {
+    const out = new Map<string, number>();
+    for (const [key, until] of this.fizzling) if (until > this.time) out.set(key, (until - this.time) / FIZZLE_SECONDS);
+    return out;
+  }
+
+  /** Little hands: how many of the round's fruit have been thrown, and how many there are. */
+  get thrown(): { done: number; total: number } {
+    return { done: Math.min(this.freshThrown, LITTLE_HANDS.fruit), total: LITTLE_HANDS.fruit };
+  }
+
+  private get littleHands(): boolean {
+    return this.options.littleHands === true;
+  }
+
+  private get timed(): boolean {
+    return this.options.seconds !== undefined;
   }
 
   /** How much faster than normal fruit flies right now (1 = normal). */
@@ -80,6 +163,11 @@ export class World {
     if (this.over) return [];
     const events: GameEvent[] = [];
     this.time += dt;
+    if (this.options.seconds !== undefined && this.time >= this.options.seconds) {
+      this.over = true;
+      this.locked = null;
+      return [{ type: "timeUp" }];
+    }
     // Everything that flies or gets thrown uses the slowed-down `gameDt`; the combo window and the speed-up don't.
     const gameDt = dt * this.timeScale;
     this.clock += gameDt;
@@ -96,7 +184,7 @@ export class World {
       }
     }
 
-    if (this.combo > 0 && this.time - this.lastSliceAt > COMBO.window) {
+    if (this.combo > 0 && this.time - this.lastProgressAt > COMBO.window) {
       if (this.combo >= COMBO.min) {
         const bonus = this.combo * COMBO.bonusPerFruit;
         this.score += bonus;
@@ -105,7 +193,12 @@ export class World {
       this.combo = 0;
     }
 
-    // A new wave once the last one is all sliced or fallen.
+    // A new wave once the last one is all sliced or fallen. Little hands rounds end after a set number of fruit.
+    if (this.live.length === 0 && this.queue.length === 0 && this.littleHands && this.freshThrown >= LITTLE_HANDS.fruit) {
+      this.over = true;
+      events.push({ type: "roundDone" });
+      return events;
+    }
     if (this.live.length === 0 && this.queue.length === 0) {
       if (this.nextWaveAt === Infinity) this.nextWaveAt = this.clock + WAVE.gap;
       if (this.clock >= this.nextWaveAt) this.startWave();
@@ -116,13 +209,30 @@ export class World {
     }
 
     for (const f of [...this.live]) {
+      if (f.hanging) {
+        f.rot += f.spin * LITTLE_HANDS.hangSpin * gameDt;
+        continue;
+      }
       f.vy += f.gravity * gameDt;
       f.x += f.vx * gameDt;
       f.y += f.vy * gameDt;
       f.rot += f.spin * gameDt;
+      if (this.littleHands && !f.frozen && f.vy >= 0) {
+        // The top of the throw: wait here to be sliced.
+        f.hanging = true;
+        f.vx = 0;
+        f.vy = 0;
+        continue;
+      }
       if (f.vy > 0 && f.y > LAUNCH.dropY) {
         this.remove(f);
         if (f.rotten || f.frozen) continue; // letting rotten fruit fall is the right thing to do; frozen is a bonus
+        if (this.timed) {
+          const penalty = Math.min(this.score, TIMED.penalty);
+          this.score -= penalty;
+          events.push({ type: "dropped", fruit: f, penalty });
+          continue;
+        }
         events.push({ type: "dropped", fruit: f });
         if (this.loseLife()) {
           events.push({ type: "gameOver" });
@@ -130,29 +240,72 @@ export class World {
         }
       }
     }
+    this.markTarget();
     return events;
   }
 
-  /** The player pressed a letter key. Wrong keys cost nothing. */
+  /** Reaction times start when a fruit becomes the one to type, not when it's thrown. */
+  private markTarget(): void {
+    const t = this.targetFruit;
+    if (t && t.targetSince === undefined) t.targetSince = this.time;
+  }
+
+  /**
+   * The player pressed a letter key. The first letter of a fruit's tag "locks on" to the oldest fruit starting with
+   * it; a pair or word's following keys must continue it. Wrong keys cost nothing, but fizzle for a moment.
+   */
   press(key: string): GameEvent[] {
     if (this.over) return [];
-    const fruit = this.live.find((f) => f.letter === key);
-    if (!fruit) {
+    if ((this.fizzling.get(key) ?? -Infinity) > this.time) return [{ type: "fizzled", key }];
+    const views = this.live.map((fruit) => ({ text: fruit.letter, typed: fruit.typed ?? 0, fruit }));
+    const result = press(views, views.find((v) => v.fruit === this.locked) ?? null, key);
+    if (result.kind === "wrong") {
       this.wrongKeys += 1;
-      return [{ type: "wrongKey", key, expected: this.live.find((f) => !f.rotten && !f.frozen)?.letter ?? null }];
+      this.slipped = true;
+      if (this.options.fizzle !== false && !this.littleHands) this.fizzling.set(key, this.time + FIZZLE_SECONDS);
+      return [{ type: "wrongKey", key, expected: this.target }];
     }
+
+    const { fruit } = result.target;
+    // The first letter is timed from when the fruit became the target (or, sliced out of turn, from when the player
+    // was last free to go for it); each following letter from the one before.
+    const since = result.index === 0 ? (fruit.targetSince ?? Math.max(fruit.launchedAt, this.lastSliceAt)) : (fruit.lastTypedAt ?? this.time);
+    const gap = this.time - this.lastProgressAt;
+    const ok = !this.slipped;
+    this.lastProgressAt = this.time;
+    this.slipped = false;
+    this.lettersTyped += 1;
+    if (ok) this.firstTry += 1;
+    fruit.typed = result.index + 1;
+    fruit.lastTypedAt = this.time;
+    const events: GameEvent[] = [{ type: "typed", fruit, letter: key, index: result.index, seconds: this.time - since, ok, done: result.done }];
+    if (!result.done) {
+      this.locked = fruit;
+      this.markTarget();
+      return events;
+    }
+
+    this.locked = null;
     this.remove(fruit);
+    this.markTarget();
     if (fruit.rotten) {
       this.combo = 0;
-      const events: GameEvent[] = [{ type: "rottenSliced", fruit }];
+      if (this.timed) {
+        const penalty = Math.min(this.score, TIMED.penalty);
+        this.score -= penalty;
+        return [...events, { type: "rottenSliced", fruit, penalty }];
+      }
+      events.push({ type: "rottenSliced", fruit });
       if (this.loseLife()) events.push({ type: "gameOver" });
       return events;
     }
-    this.score += POINTS_PER_SLICE;
+    const length = fruit.letter.length;
+    const points = Math.round(POINTS_PER_SLICE * length * (length > 1 ? SEQUENCE_BONUS : 1));
+    this.score += points;
     this.sliced += 1;
-    this.combo = this.time - this.lastSliceAt <= COMBO.window ? this.combo + 1 : 1;
+    this.combo = gap <= COMBO.window ? this.combo + 1 : 1;
     this.lastSliceAt = this.time;
-    const events: GameEvent[] = [{ type: "sliced", fruit, reactionTime: this.time - fruit.launchedAt, combo: this.combo }];
+    events.push({ type: "sliced", fruit, reactionTime: this.time - since, combo: this.combo, points });
     if (fruit.frozen) {
       this.freezeLeft = FREEZE.seconds;
       events.push({ type: "freeze", seconds: FREEZE.seconds });
@@ -165,6 +318,7 @@ export class World {
   releaseAll(): Fruit[] {
     this.queue = [];
     this.freezeLeft = 0;
+    this.locked = null;
     return this.live.splice(0);
   }
 
@@ -180,9 +334,10 @@ export class World {
     const [min, max] = DIFFICULTIES[this.options.difficulty].perWave;
     const extra = Math.min(Math.floor(this.speedLevel / RAMP.levelsPerExtraFruit), RAMP.maxExtraFruit);
     let count = min + Math.floor(this.random() * (max - min + 1)) + extra;
-    const rotten = this.options.rotten && this.wave >= ROTTEN.fromWave && this.random() < ROTTEN.chance;
+    const rotten = this.options.rotten && !this.littleHands && this.wave >= ROTTEN.fromWave && this.random() < ROTTEN.chance;
     // Every letter on screen is different, so a short lesson can't fill a big wave.
-    count = Math.min(count, this.options.letters.length - (rotten ? 1 : 0));
+    count = Math.min(count, this.options.keys.length - (rotten ? 1 : 0));
+    if (this.littleHands) count = Math.max(1, Math.min(count, LITTLE_HANDS.fruit - this.freshThrown));
     const rottenSlot = rotten ? Math.floor(this.random() * (count + 1)) : -1;
     // At most one frozen fruit per wave, and none while it's still slow from the last one.
     const frozen = this.wave >= FREEZE.fromWave && this.freezeLeft === 0 && this.random() < FREEZE.chance;
@@ -207,7 +362,12 @@ export class World {
   private queueBurst(): void {
     const [low, high] = FREEZE.burstSpacing;
     let at = this.clock;
-    for (let i = 0; i < this.burstSize; i++) {
+    let size = this.burstSize;
+    if (this.littleHands) {
+      const queued = this.queue.filter((q) => !q.rotten && !q.frozen).length;
+      size = Math.min(size, LITTLE_HANDS.fruit - this.freshThrown - queued);
+    }
+    for (let i = 0; i < size; i++) {
       this.queue.push({ at, rotten: false, frozen: false });
       at += low + this.random() * (high - low);
     }
@@ -215,12 +375,14 @@ export class World {
   }
 
   private launch({ rotten, frozen }: { rotten: boolean; frozen: boolean }): Fruit | null {
-    const letter = this.pickLetter();
+    const letter = this.pickTag(rotten || frozen);
     if (!letter) return null;
     const x = this.between(LAUNCH.xMin, LAUNCH.xMax);
     const apex = this.between(LAUNCH.apexMin, LAUNCH.apexMax);
-    // Up and back down in airTime seconds: height h = g * T^2 / 8, so g = 8h / T^2.
-    const airTime = DIFFICULTIES[this.options.difficulty].airTime / this.speedMultiplier;
+    // Up and back down in airTime seconds: height h = g * T^2 / 8, so g = 8h / T^2. Keys still being learned fly slower.
+    // A pair or word flies at the pace of its least-known letter.
+    const pace = Math.min(1, Math.max(0.1, ...[...letter].map((ch) => this.options.pace?.(ch) ?? 1)));
+    const airTime = DIFFICULTIES[this.options.difficulty].airTime / this.speedMultiplier / pace;
     const gravity = (8 * (LAUNCH.y - apex)) / airTime ** 2;
     // Drift towards the middle, so fruit stays on screen.
     const landX = x + (W / 2 - x) * 0.6 + this.between(-60, 60);
@@ -240,14 +402,20 @@ export class World {
       launchedAt: this.time,
     };
     this.live.push(fruit);
+    if (!rotten && !frozen) this.freshThrown += 1;
     return fruit;
   }
 
-  /** A letter not already in the air, or null if every lesson letter is in use. */
-  private pickLetter(): string | null {
-    const inAir = new Set(this.live.map((f) => f.letter));
-    const free = this.options.letters.filter((l) => !inAir.has(l));
-    return free.length > 0 ? free[Math.floor(this.random() * free.length)] : null;
+  /**
+   * What a new fruit carries, never starting with a first letter already in the air (so the first key always picks
+   * out one fruit): one letter weighted by need, or for fresh fruit whatever `pick` chooses. Null if nothing fits.
+   */
+  private pickTag(single: boolean): string | null {
+    const inUse = new Set(this.live.map((f) => f.letter[0]));
+    if (!single && this.options.pick) return this.options.pick(inUse);
+    const { keys, weights } = this.options;
+    if (keys.every((k) => inUse.has(k))) return null;
+    return pickWeighted(keys, (k) => weights?.get(k) ?? 1, this.random, (k) => inUse.has(k));
   }
 
   /** Fruit kinds in a shuffled cycle, so every kind turns up regularly. */
@@ -267,6 +435,7 @@ export class World {
   }
 
   private remove(fruit: Fruit): void {
+    if (fruit === this.locked) this.locked = null;
     this.live.splice(this.live.indexOf(fruit), 1);
   }
 }

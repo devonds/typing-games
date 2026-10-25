@@ -8,6 +8,28 @@ export type SpeedMode = "ramp" | "steady";
 
 export const LIVES = 5;
 export const POINTS_PER_SLICE = 10;
+/** A pair or word scores POINTS_PER_SLICE per letter, times this. */
+export const SEQUENCE_BONUS = 1.5;
+
+/** How long a round runs: until the baskets run out, or a timed round where a dropped fruit costs points instead. */
+export type RoundLength = "baskets" | "timed";
+export const TIMED = {
+  seconds: 120,
+  /** Points lost for a fruit that falls, or a rotten one sliced, in a timed round. */
+  penalty: 10,
+};
+
+/** A wrong key "fizzles": that key does nothing for this long, so hammering keys doesn't slice fruit. */
+export const FIZZLE_SECONDS = 0.5;
+
+/** Little hands: no time pressure. Fruit hangs at the top of its throw until it's sliced, and a round is this long. */
+export const LITTLE_HANDS = {
+  fruit: 20,
+  /** How fast hanging fruit turns, as a share of its spin when thrown. */
+  hangSpin: 0.25,
+  /** Stars on the results screen: right first time at least this often for two, then three. */
+  stars: [0.7, 0.9] as [two: number, three: number],
+};
 
 export const DIFFICULTIES: Record<Difficulty, { perWave: [min: number, max: number]; airTime: number }> = {
   // airTime: seconds from leaving the crate to falling back past it.
@@ -77,3 +99,20 @@ export const LAUNCH = {
 
 export const FRUIT_KINDS = ["apple", "orange", "lemon", "kiwi", "watermelon", "strawberry", "peach", "pear", "dragonfruit"] as const;
 export type FruitKindName = (typeof FRUIT_KINDS)[number];
+
+/** The finger keyboard across the bottom of the play screen, over the crates. `key` is one key's pitch. */
+export const KEYBOARD = {
+  centreX: W / 2,
+  /** Top of the top letter row. */
+  top: 226,
+  key: 12.5,
+  /** Height of a letter row, and of the shorter space bar row. */
+  row: 10.5,
+  spaceRow: 7,
+};
+
+/** "Fingers on the bumps" before every round. */
+export const RITUAL = {
+  /** The overlay fades away over this long once both fingers are in place; the round is already running. */
+  fadeOut: 0.45,
+};

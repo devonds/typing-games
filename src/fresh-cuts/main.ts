@@ -1,10 +1,9 @@
 // Boots the game: canvas, input, sound, saved data, the scene switcher and the main loop.
-import { Input, NO_INPUT } from "../shared/input";
-import { lettersFor } from "../shared/lessons";
-import { mergeRound, type Stats } from "../shared/letters";
-import { loadLetterHistory, saveLetterHistory } from "../shared/storage";
+import { Input, spent } from "../shared/input";
+import { Player } from "../shared/player";
+import { currentSession, stepFor } from "../shared/session";
 import { Sfx } from "./audio";
-import { H, W } from "./config";
+import { H, TIMED, W } from "./config";
 import { MenuScene } from "./scenes/menu";
 import { PlayScene } from "./scenes/play";
 import { ResultsScene } from "./scenes/results";
@@ -31,37 +30,32 @@ const input = new Input(canvas, { width: W, height: H }, () => sfx.unlock());
 let scene: Scene;
 
 class Game implements App {
-  readonly settings = storage.loadSettings();
+  player = new Player();
+  settings = storage.loadSettings(this.player);
   readonly sfx = sfx;
-  private history: Stats = loadLetterHistory();
-  private best = storage.loadBest();
+  private best = storage.loadBest(this.player);
 
   constructor() {
     sfx.enabled = this.settings.sound;
   }
 
-  get stats(): Stats {
-    return this.history;
-  }
-
   saveSettings(): void {
-    storage.saveSettings(this.settings);
+    storage.saveSettings(this.player, this.settings);
     sfx.enabled = this.settings.sound;
   }
 
-  finishRound(round: Stats): void {
-    if (Object.keys(round).length === 0) return;
-    this.history = mergeRound(this.history, round);
-    saveLetterHistory(this.history);
+  reloadPlayer(): void {
+    this.player = new Player();
+    this.settings = storage.loadSettings(this.player);
+    this.best = storage.loadBest(this.player);
+    sfx.enabled = this.settings.sound;
   }
 
-  submitScore(score: number): number {
-    const { lesson, difficulty, speedMode, rotten } = this.settings;
-    const key = `${lesson}/${difficulty}/${speedMode}/${rotten ? "rotten" : "fresh"}`;
+  submitScore(score: number, key: string): number {
     const before = this.best[key] ?? 0;
     if (score > before) {
       this.best[key] = score;
-      storage.saveBest(this.best);
+      storage.saveBest(this.player, this.best);
     }
     return before;
   }
@@ -70,10 +64,22 @@ class Game implements App {
     scene = new MenuScene(this);
   }
 
+  /**
+   * Start a round: today's practice step if it's Fresh Cuts' turn (its lesson and length, the player's other
+   * settings, nothing saved over them), otherwise the menu's choices.
+   */
   startGame(): void {
-    const letters = lettersFor(this.settings.lesson, this.history);
-    if (!letters) return this.showMenu(); // "weak letters" without enough history; the menu explains
-    scene = new PlayScene(this, letters);
+    const { player, settings } = this;
+    const step = stepFor(player.profile.id, player.today, "fresh-cuts");
+    const session = step ? currentSession(player.profile.id, player.today) : null;
+    let lesson = step?.lesson ?? settings.lesson;
+    // A session's Tricky letters step before there's enough history plays My keys instead.
+    if (step && !player.practice(lesson)) lesson = "mine";
+    const practice = player.practice(lesson);
+    if (!practice) return this.showMenu(); // Tricky letters without enough history; the menu explains
+    // Little hands always play their fixed number of fruit.
+    const seconds = player.littleHands ? null : step ? step.length : settings.length === "timed" ? TIMED.seconds : null;
+    scene = new PlayScene(this, { practice, lesson, seconds, session: session ? { step: session.at + 1, of: session.steps.length } : null });
   }
 
   showResults(result: RoundResult): void {
@@ -99,7 +105,7 @@ function frame(now: number): void {
     let frameInput = input.drain();
     while (backlog >= STEP) {
       scene.update(STEP, frameInput);
-      frameInput = NO_INPUT;
+      frameInput = spent(frameInput);
       backlog -= STEP;
     }
   }

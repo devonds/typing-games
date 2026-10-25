@@ -68,6 +68,70 @@ export function drawTag(ctx: Ctx, letter: string, x: number, y: number, style: T
   text(ctx, letter.toUpperCase(), x, y + 1, `700 13px ${SERIF}`, tag.ink);
 }
 
+/**
+ * A wider price tag for a pair or word. Typed letters fade to brass; the next one sits on a small brass rule. When
+ * it's the one being typed (`locked`), the tag glows and its edge turns gold.
+ */
+export function drawWordTag(ctx: Ctx, word: string, typed: number, x: number, y: number, locked: boolean, t: number): void {
+  const pitch = 9;
+  const w = word.length * pitch + 9;
+  const h = 19;
+  ctx.save();
+  ctx.shadowColor = locked ? `rgba(251,231,176,${0.75 + 0.25 * Math.sin(t * 6)})` : "rgba(0,0,0,0.5)";
+  ctx.shadowBlur = locked ? 9 : 3;
+  ctx.shadowOffsetY = locked ? 0 : 1;
+  roundRect(ctx, x - w / 2, y - h / 2, w, h, 3);
+  ctx.fillStyle = INK.cream;
+  ctx.fill();
+  ctx.restore();
+  roundRect(ctx, x - w / 2 + 1.5, y - h / 2 + 1.5, w - 3, h - 3, 2);
+  ctx.strokeStyle = locked ? GOLD.deep : GOLD.brass;
+  ctx.lineWidth = locked ? 1.3 : 0.8;
+  ctx.stroke();
+  const left = x - ((word.length - 1) * pitch) / 2;
+  for (let i = 0; i < word.length; i++) {
+    const lx = left + i * pitch;
+    const done = i < typed;
+    text(ctx, word[i].toUpperCase(), lx, y + 1, `700 12px ${SERIF}`, done ? "rgba(184,137,58,0.55)" : INK.dark);
+    if (locked && i === typed) {
+      ctx.fillStyle = GOLD.deep;
+      ctx.fillRect(lx - 3, y + 6.5, 6, 1);
+    }
+  }
+}
+
+/** A timed round's clock, where the baskets usually sit: a brass dial that empties, and the minutes and seconds. */
+export function drawClock(ctx: Ctx, left: number, total: number): void {
+  const x = W - 22;
+  const y = 16;
+  const r = 7;
+  const share = Math.max(0, left / total);
+  const urgent = left <= 10;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(14,22,18,0.85)";
+  ctx.fill();
+  if (share > 0) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.arc(x, y, r - 1.5, -Math.PI / 2, -Math.PI / 2 + share * Math.PI * 2);
+    ctx.closePath();
+    ctx.fillStyle = urgent ? "#e8a05a" : "rgba(201,164,92,0.75)";
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = GOLD.brass;
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = GOLD.brass;
+  ctx.fillRect(x - 1.5, y - r - 2.5, 3, 1.6);
+  ctx.restore();
+  const s = Math.ceil(left);
+  text(ctx, `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`, x - r - 5, y + 0.5, `600 13px ${SERIF}`, urgent ? "#ffb070" : GOLD.pale, "right");
+}
+
 /** A shopping basket: one life. Empty ones are just a faint outline. */
 export function drawBasket(ctx: Ctx, x: number, y: number, full: boolean): void {
   ctx.save();
@@ -110,6 +174,15 @@ export function drawHud(ctx: Ctx, score: number, lives: number, maxLives: number
   text(ctx, String(score), 14, 27, `600 15px ${SERIF}`, GOLD.pale, "left");
   if (speedLevel !== null) text(ctx, `Speed ${speedLevel + 1}`, 14, 41, `italic 7px ${SERIF}`, GOLD.brass, "left");
   for (let i = 0; i < maxLives; i++) drawBasket(ctx, W - 18 - i * 21, 14, i < lives);
+}
+
+/** Little hands' corner: fruit sliced so far out of the round's total, with a small filled basket. */
+export function drawFruitCount(ctx: Ctx, done: number, total: number): void {
+  text(ctx, "Fruit", 14, 14, `italic 8px ${SERIF}`, GOLD.brass, "left");
+  ctx.font = `600 15px ${SERIF}`;
+  const w = ctx.measureText(String(done)).width;
+  text(ctx, String(done), 14, 27, `600 15px ${SERIF}`, GOLD.pale, "left");
+  text(ctx, `of ${total}`, 14 + w + 4, 28, `italic 9px ${SERIF}`, GOLD.brass, "left");
 }
 
 /** Slow motion: a cold blue tint, frost round the edges, and a snowflake with the time left. `amount` fades it in and out. */
@@ -189,4 +262,31 @@ export function drawWord(ctx: Ctx, s: string, x: number, y: number, alpha: numbe
   ctx.globalAlpha = alpha;
   text(ctx, s, x, y, `italic 700 ${big ? 24 : 13}px ${SERIF}`, big ? GOLD.pale : "#ffffff", "center", "rgba(10,20,15,0.85)", 3);
   ctx.globalAlpha = 1;
+}
+
+/** A five-pointed star: gold when earned, a faint outline when not. */
+export function drawStar(ctx: Ctx, x: number, y: number, r: number, earned: boolean): void {
+  ctx.save();
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const d = i % 2 ? r * 0.45 : r;
+    ctx.lineTo(x + Math.cos(a) * d, y + Math.sin(a) * d);
+  }
+  ctx.closePath();
+  ctx.lineJoin = "round";
+  if (earned) {
+    const g = ctx.createLinearGradient(0, y - r, 0, y + r);
+    g.addColorStop(0, GOLD.pale);
+    g.addColorStop(1, GOLD.deep);
+    ctx.shadowColor = "rgba(251,231,176,0.6)";
+    ctx.shadowBlur = 8;
+    ctx.fillStyle = g;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.strokeStyle = earned ? GOLD.pale : "rgba(201,164,92,0.4)";
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  ctx.restore();
 }
