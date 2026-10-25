@@ -2,7 +2,6 @@ import type { Frame } from "../../shared/input";
 import type { Finger } from "../../shared/keyboard";
 import type { LessonId } from "../../shared/lessons";
 import type { Player, Practice } from "../../shared/player";
-import type { GameId } from "../../shared/session";
 import type { Sfx } from "../audio";
 import type { Settings } from "../storage";
 
@@ -20,8 +19,6 @@ export interface RoundPlan {
   lesson: LessonId;
   /** Seconds for a timed round, or null to play until the baskets run out (or, little hands, the fruit). */
   seconds: number | null;
-  /** Today's practice: which step this is (1-based), of how many. */
-  session: { step: number; of: number } | null;
 }
 
 export interface RoundResult {
@@ -45,8 +42,6 @@ export interface RoundResult {
   weakestFinger: Finger | null;
   /** For "My keys": where the player is on the Learn path (1-based), and how many stages there are. */
   stage: { now: number; of: number } | null;
-  /** Today's practice: the game to play next, or null when today's practice is done. */
-  session: { next: GameId | null } | null;
 }
 
 /** What scenes can ask of the game as a whole. Implemented in main.ts. */

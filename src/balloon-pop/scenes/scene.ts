@@ -2,7 +2,6 @@ import type { Sfx } from "../audio";
 import type { Frame } from "../../shared/input";
 import type { RoundLog } from "../../shared/history";
 import type { LessonId } from "../../shared/lessons";
-import type { GameId, Step } from "../../shared/session";
 import type { Player } from "../../shared/player";
 import type { Pixels } from "../look/pixels";
 import type { Scenery } from "../look/scenery";
@@ -16,14 +15,11 @@ export interface Scene {
   pause?(): void;
 }
 
-/** How this round is played: from the menu settings, or from a step of Today's practice. */
+/** How this round is played, from the menu settings. */
 export interface Round {
   lesson: LessonId;
   /** A timed round's length in seconds, or null to play until the lives run out (or 20 balloons, little hands). */
   seconds: number | null;
-  /** Today's practice: this step, and where it is ("1 OF 3"); null outside a session. */
-  step: Step | null;
-  stepLabel: string | null;
 }
 
 export interface RoundResult {
@@ -61,10 +57,6 @@ export interface App {
   finishRound(log: RoundLog, seconds: number): { unlocked: string[] };
   /** Record a score; returns the best before it. Bests are kept per lesson, level, speed and round length. */
   submitScore(score: number, round: Round): number;
-  /** Today's practice: this game's step is done. Returns the next step, or null if that was the last. */
-  finishStep(): Step | null;
-  /** Go to another game's page (for the next step of Today's practice). */
-  openGame(game: GameId): void;
   showMenu(): void;
   startGame(): void;
   showResults(result: RoundResult, scenery: Scenery): void;

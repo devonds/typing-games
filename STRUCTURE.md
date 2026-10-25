@@ -41,7 +41,7 @@ src/
 │   ├── hands.ts         per-finger results, the finger that most needs practice
 │   ├── words.ts         a kid-friendly word bank and letter pairs, filtered to unlocked keys
 │   ├── units.ts         letter, pair or word for a balloon or fruit; lock-on typing of words
-│   ├── session.ts       Today's practice: a step in each game, handed on from results to the next game
+│   ├── session.ts       Today's practice: one Word Garden round a day, started from the home page
 │   ├── synth.ts         tones and filtered noise for sound effects
 │   └── rng.ts           seeded random numbers (scenery layout, tests)
 │

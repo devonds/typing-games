@@ -1,6 +1,5 @@
 import type { Frame } from "../../shared/input";
 import { FINGER_NAMES } from "../../shared/keyboard";
-import { GAME_NAMES, gameUrl } from "../../shared/session";
 import { H, W } from "../config";
 import { drawProgressKeys, fingerColour } from "../look/keyboard";
 import { drawStore, drawVignette } from "../look/store";
@@ -13,7 +12,6 @@ const NEWS_Y = 128;
 const KEYS_TOP = 139;
 const KEY_PITCH = 13;
 const NOTES_Y = 203;
-const SESSION_Y = 222;
 const BUTTONS_Y = 240;
 
 function clock(seconds: number): string {
@@ -34,25 +32,18 @@ export class ResultsScene implements Scene {
     private readonly app: App,
     private readonly result: RoundResult,
   ) {
-    if (result.unlocked.length > 0 || result.session?.next === null) app.sfx.allDone();
-  }
-
-  /** Enter: today's practice moves on to the next game, otherwise another round. */
-  private again(): void {
-    const next = this.result.session?.next;
-    if (next) location.href = gameUrl(next);
-    else this.app.startGame();
+    if (result.unlocked.length > 0) app.sfx.allDone();
   }
 
   update(dt: number, input: Frame): void {
     this.t += dt;
     if (this.t < 0.6) return; // don't let a last frantic keypress skip the results
     for (const key of input.keys) {
-      if (key === "Enter" || key === " ") return this.again();
+      if (key === "Enter" || key === " ") return this.app.startGame();
       if (key === "Escape") return this.app.showMenu();
     }
     for (const { x, y } of input.clicks) {
-      if (y >= BUTTONS_Y - 10) return x < W / 2 ? this.again() : this.app.showMenu();
+      if (y >= BUTTONS_Y - 10) return x < W / 2 ? this.app.startGame() : this.app.showMenu();
     }
   }
 
@@ -81,8 +72,7 @@ export class ResultsScene implements Scene {
     // A word on the weakest finger, and the letters to practise, centred in the space under the keys.
     const practice = r.tricky.length > 0 ? `Practice: ${r.tricky.join(" ").toUpperCase()}` : "Nothing got away!";
     const lines = r.weakestFinger ? 2 : 1;
-    // Today's practice adds a line underneath, so the notes move up a little to make room.
-    let y = NOTES_Y - (lines - 1) * 7 - (r.session ? 6 : 0);
+    let y = NOTES_Y - (lines - 1) * 7;
     if (r.weakestFinger) {
       const line = `Your ${FINGER_NAMES[r.weakestFinger]} needs practice`;
       ctx.font = `600 9px ${SERIF}`;
@@ -96,19 +86,7 @@ export class ResultsScene implements Scene {
     }
     text(ctx, practice, W / 2, y, `600 9px ${SERIF}`, r.tricky.length > 0 ? "#ff9a5a" : "#9ad13a");
 
-    // Today's practice: what's next, or a little celebration.
-    const session = r.session;
-    if (session) {
-      if (session.next) text(ctx, `Today's practice  ·  Next: ${GAME_NAMES[session.next]}`, W / 2, SESSION_Y, `italic 600 10px ${SERIF}`, GOLD.pale);
-      else {
-        const glow = 0.75 + 0.25 * Math.sin(this.t * 3);
-        ctx.globalAlpha = glow;
-        text(ctx, "✦  Today's practice done!  ✦", W / 2, SESSION_Y, `italic 700 12px ${SERIF}`, GOLD.pale, "center", "rgba(10,20,15,0.8)", 3);
-        ctx.globalAlpha = 1;
-      }
-    }
-    const enter = session?.next ? `Enter: ${GAME_NAMES[session.next]}` : "Enter: again";
-    text(ctx, enter, PANEL.x + 24, BUTTONS_Y, `italic 600 10px ${SERIF}`, GOLD.pale, "left");
+    text(ctx, "Enter: again", PANEL.x + 24, BUTTONS_Y, `italic 600 10px ${SERIF}`, GOLD.pale, "left");
     text(ctx, "Esc: menu", PANEL.x + PANEL.w - 24, BUTTONS_Y, `italic 10px ${SERIF}`, INK.dim, "right");
   }
 

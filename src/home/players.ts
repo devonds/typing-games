@@ -3,7 +3,7 @@
 import { KEYS } from "../shared/keyboard";
 import { STAGES, mastered, masteryProgress, newestKeys } from "../shared/path";
 import { Player } from "../shared/player";
-import { GAME_NAMES, currentSession, endSession, startSession } from "../shared/session";
+import { TODAY, practiceState, startPractice } from "../shared/session";
 import { PICTURES, createProfile, currentProfile, deleteProfile, listProfiles, setCurrent, updateProfile, type Picture, type Profile } from "../shared/profiles";
 
 export const PICTURE_EMOJI: Record<Picture, string> = {
@@ -180,28 +180,17 @@ export class Players {
     return el("div", { className: "progress" }, board, el("div", {}, el("ul", {}, ...facts.map((f) => el("li", { textContent: f }))), this.today(player)), edit);
   }
 
-  /** "Today's practice": about ten minutes across the three games, or carry on with today's if it's under way. */
+  /** "Today's practice": a round of Word Garden. Once it's done, a quiet note instead of a button. */
   private today(player: Player): HTMLElement {
-    const session = currentSession(player.profile.id, player.today);
-    const go = el("button", { type: "button", className: "primary" });
-    const box = el("div", { className: "buttons today" }, go);
-    if (session) {
-      const step = session.steps[session.at];
-      go.textContent = `Carry on: ${GAME_NAMES[step.game]} (${session.at + 1} of ${session.steps.length})`;
-      go.addEventListener("click", () => (location.href = `${step.game}/`));
-      const stop = el("button", { type: "button", textContent: "Stop for today" });
-      stop.addEventListener("click", () => {
-        endSession(player.profile.id);
-        this.render();
-      });
-      box.append(stop);
-    } else {
-      go.textContent = "Today's practice (about 10 minutes)";
-      go.addEventListener("click", () => {
-        const first = startSession(player.profile.id, player.today);
-        location.href = `${first.game}/`;
-      });
+    if (practiceState(player.profile.id, player.today) === "done") {
+      return el("p", { className: "today done", textContent: "✓ Today's practice done! Play some Balloon Pop or Fresh Cuts if you feel like practicing more. See you tomorrow!" });
     }
-    return box;
+    const count = player.littleHands ? TODAY.littleHands : TODAY.sentences;
+    const go = el("button", { type: "button", className: "primary", textContent: `Today's practice (${count} sentences)` });
+    go.addEventListener("click", () => {
+      startPractice(player.profile.id, player.today);
+      location.href = "word-garden/";
+    });
+    return el("div", { className: "buttons today" }, go);
   }
 }

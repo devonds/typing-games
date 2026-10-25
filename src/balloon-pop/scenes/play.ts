@@ -222,7 +222,7 @@ export class PlayScene implements Scene {
     this.scenery.draw(p);
     if (this.ritual) {
       this.world.launchers.forEach((l, i) => drawLauncher(p, l.x, this.barrels[i], 0));
-      return drawRitual(p, this.ritualView, this.t, this.littleHands, this.round.stepLabel);
+      return drawRitual(p, this.ritualView, this.t, this.littleHands);
     }
     const balloons = this.ending ? this.ending.balloons : this.world.balloons;
     for (const b of balloons) {

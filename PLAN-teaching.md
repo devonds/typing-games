@@ -193,8 +193,9 @@ It's chosen when a profile is made ("Is this for a younger child?") and can be c
 
 - **Progress panel**: keys unlocked (a keyboard picture filling in), a streak of days played, and the one-minute check
   over time. It reads the shared storage directly.
-- **"Today's practice"** button: about 10 minutes across the games. A few sentences in Word Garden, then a short
-  Balloon Pop round on new keys, then Fresh Cuts. The research favours short, frequent sessions over long ones.
+- **"Today's practice"** button: one round of Word Garden (8 sentences, 5 for Little hands), the most thorough of
+  the three games. Balloon Pop and Fresh Cuts stay optional, for fun; nothing pushes children to play longer. The
+  research favours short, frequent sessions over long ones.
 
 ## Build order
 

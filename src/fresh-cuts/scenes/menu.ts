@@ -3,7 +3,6 @@ import type { Frame } from "../../shared/input";
 import { LESSON_IDS, lessonById, type LessonId } from "../../shared/lessons";
 import { STAGES, newestKeys } from "../../shared/path";
 import { listProfiles, setCurrent, updateProfile } from "../../shared/profiles";
-import { stepFor } from "../../shared/session";
 import { FRUIT_KINDS, H, LITTLE_HANDS, LIVES, TIMED, W, type Difficulty, type RoundLength, type SpeedMode } from "../config";
 import { FRUIT, drawShadow, drawWhole } from "../look/fruit";
 import { drawStore, drawVignette } from "../look/store";
@@ -213,10 +212,7 @@ export class MenuScene implements Scene {
     ctx.fillRect(PANEL.x + 20, (rowY(0) + rowY(1)) / 2, PANEL.w - 40, 0.5);
 
     this.drawLessonHint(ctx, HINT_Y);
-    // During today's practice, Enter plays its step rather than the choices above.
-    const session = stepFor(player.profile.id, player.today, "fresh-cuts") !== null;
-    const prompt = session ? "Press Enter for today's practice" : "Press Enter to play";
-    if (blink(this.t, 1) || this.nudge > 0) text(ctx, prompt, W / 2, PLAY_Y, `italic 600 12px ${SERIF}`, GOLD.pale);
+    if (blink(this.t, 1) || this.nudge > 0) text(ctx, "Press Enter to play", W / 2, PLAY_Y, `italic 600 12px ${SERIF}`, GOLD.pale);
     const footer = ROWS[this.selected] === "player" ? "New players are added on the home page" : "↑ ↓ choose   ← → change";
     text(ctx, footer, W / 2, H - 12, `8px ${SERIF}`, INK.dim);
   }

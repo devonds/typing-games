@@ -158,7 +158,7 @@ function bigKeyX(k: Key): number {
  * "Fingers on F and J": the home row drawn large, with every finger resting where it belongs and the two pointer
  * fingers on the bumps. Each key lights as it's held; `fade` (1 -> 0) lets it melt away as the round starts.
  */
-export function drawRitual(ctx: Ctx, view: RitualView, t: number, fade = 1, littleHands = false, note?: string): void {
+export function drawRitual(ctx: Ctx, view: RitualView, t: number, fade = 1, littleHands = false): void {
   if (fade <= 0) return;
   ctx.save();
   ctx.globalAlpha = fade;
@@ -188,8 +188,6 @@ export function drawRitual(ctx: Ctx, view: RitualView, t: number, fade = 1, litt
   for (const k of HOME_ROW) if (k.home) drawFinger(ctx, k, (k.key === "f" && view.f) || (k.key === "j" && view.j));
   ctx.restore();
 
-  // Today's practice says where it's up to, just under the board.
-  if (note) text(ctx, note, W / 2, PANEL.y + PANEL.h + 12, `italic 600 9px ${SERIF}`, GOLD.pale);
   text(ctx, "Esc: menu", W / 2, H - 12, `8px ${SERIF}`, INK.dim);
   ctx.restore();
 }

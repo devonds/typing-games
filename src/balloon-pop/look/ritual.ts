@@ -69,9 +69,9 @@ function glove(p: Pixels, cx: number, tipY: number, side: -1 | 1): void {
 
 /**
  * t is a running time in seconds, for blinking and the fingers' little bob. Little hands only press F, then J,
- * rather than holding both. `stepLabel` ("1 OF 3") shows this is a step of Today's practice.
+ * rather than holding both.
  */
-export function drawRitual(p: Pixels, view: RitualView, t: number, littleHands = false, stepLabel: string | null = null): void {
+export function drawRitual(p: Pixels, view: RitualView, t: number, littleHands = false): void {
   drawPanel(p, 8, 6, W - 16, 100);
   p.centred(littleHands ? "PRESS F, THEN J" : "FINGERS ON F AND J", W / 2 + 1, 13, C.yellow, C.purple, 2);
   p.centred(littleHands ? "POINTER FINGERS ON THE BUMPS" : "FEEL THE BUMPS? HOLD THEM DOWN", W / 2, 33, C.white);
@@ -95,7 +95,6 @@ export function drawRitual(p: Pixels, view: RitualView, t: number, littleHands =
 
   if (glow > 0) p.centred("READY!", W / 2 + 1, 46, C.lime, C.black, glow > 0.3 ? 2 : 1);
   else if (view.f !== view.j) p.centred(littleHands ? "NOW J!" : view.f ? "NOW J TOO!" : "NOW F TOO!", W / 2, 49, C.cyan);
-  else if (stepLabel) p.centred(`TODAY'S PRACTICE ${stepLabel}`, W / 2, 49, C.cyan);
   else if (Math.floor(t * 2) % 2 === 0) p.centred("ESC: MENU", W / 2, 49, C.slate);
 
   for (const f of fingers) glove(p, f.cx, f.tip, f.side);

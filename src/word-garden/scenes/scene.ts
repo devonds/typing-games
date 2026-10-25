@@ -1,4 +1,3 @@
-import type { GameId } from "../../shared/session";
 import type { Frame } from "../../shared/input";
 import type { Player } from "../../shared/player";
 import type { RoundLog } from "../../shared/history";
@@ -38,8 +37,6 @@ export interface RoundResult {
   check: { previous: number | null } | null;
   /** Today's practice was finished by this round. */
   sessionDone: boolean;
-  /** Today's practice goes on to this game next (Enter takes the player there). */
-  nextGame: GameId | null;
   /** The time of day the round ended in, so the results keep the same sky. */
   lastKind: BurstKind;
 }

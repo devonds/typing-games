@@ -1,7 +1,6 @@
 // Boots the game: canvas, input, sound, saved data, the scene switcher and the main loop.
 import { Input, spent } from "../shared/input";
 import { Player } from "../shared/player";
-import { currentSession, stepFor } from "../shared/session";
 import { Sfx } from "./audio";
 import { H, TIMED, W } from "./config";
 import { MenuScene } from "./scenes/menu";
@@ -64,22 +63,15 @@ class Game implements App {
     scene = new MenuScene(this);
   }
 
-  /**
-   * Start a round: today's practice step if it's Fresh Cuts' turn (its lesson and length, the player's other
-   * settings, nothing saved over them), otherwise the menu's choices.
-   */
+  /** Start a round with the menu's choices. */
   startGame(): void {
     const { player, settings } = this;
-    const step = stepFor(player.profile.id, player.today, "fresh-cuts");
-    const session = step ? currentSession(player.profile.id, player.today) : null;
-    let lesson = step?.lesson ?? settings.lesson;
-    // A session's Tricky letters step before there's enough history plays My keys instead.
-    if (step && !player.practice(lesson)) lesson = "mine";
+    const lesson = settings.lesson;
     const practice = player.practice(lesson);
     if (!practice) return this.showMenu(); // Tricky letters without enough history; the menu explains
     // Little hands always play their fixed number of fruit.
-    const seconds = player.littleHands ? null : step ? step.length : settings.length === "timed" ? TIMED.seconds : null;
-    scene = new PlayScene(this, { practice, lesson, seconds, session: session ? { step: session.at + 1, of: session.steps.length } : null });
+    const seconds = player.littleHands ? null : settings.length === "timed" ? TIMED.seconds : null;
+    scene = new PlayScene(this, { practice, lesson, seconds });
   }
 
   showResults(result: RoundResult): void {

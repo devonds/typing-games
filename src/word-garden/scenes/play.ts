@@ -12,7 +12,7 @@ import { Bursts } from "../look/bursts";
 import { drawKeyboard, type KeyboardExtras } from "../look/keyboard";
 import { FLASH_SECONDS } from "../../shared/guide";
 import { shiftFor } from "../../shared/keyboard";
-import { finishStep } from "../../shared/session";
+import { finishPractice } from "../../shared/session";
 import { saveMarks } from "../storage";
 import { setUpRound, type RoundSetup } from "./setup";
 import { Landscape } from "../look/landscape";
@@ -250,8 +250,8 @@ export class PlayScene implements Scene {
     if (this.setup.check) player.recordCheck(wpm);
     // Little hands don't race the clock, so there's no words-per-minute best to keep; a check isn't a round's best.
     const best = this.littleHands || this.setup.check ? 0 : this.app.submitWpm(wpm);
-    const next = this.setup.step !== null ? finishStep(player.profile.id, player.today, "word-garden") : null;
-    const sessionDone = this.setup.step !== null && next === null;
+    const sessionDone = this.setup.practice;
+    if (sessionDone) finishPractice(player.profile.id, player.today);
     this.app.showResults({
       // A check can end mid-sentence: count the whole ones.
       sentences: this.setup.check ? r.sentence : r.sentences.length,
@@ -267,7 +267,6 @@ export class PlayScene implements Scene {
       marks: marks.unlocked,
       check: this.setup.check ? { previous } : null,
       sessionDone,
-      nextGame: next?.game ?? null,
       lastKind: this.kinds[this.kinds.length - 1],
     });
   }
@@ -286,7 +285,7 @@ export class PlayScene implements Scene {
       const outro = this.readyAt === null ? 0 : (this.t - this.readyAt) / RITUAL.outro;
       if (!this.setup.check) drawProgress(ctx, p, this.round.sentences.length, 0, false);
       drawRitual(ctx, p, this.ritualView, this.glow, this.t, outro, this.littleHands);
-      const intro = this.setup.check ? "One-minute check" : this.setup.stepNumber ? `Today's practice · ${this.setup.stepNumber[0]} of ${this.setup.stepNumber[1]}` : null;
+      const intro = this.setup.check ? "One-minute check" : this.setup.practice ? "Today's practice" : null;
       if (intro) text(ctx, intro, W / 2, 34, `italic 600 10px ${SERIF}`, p.inkSoft, "center", p.textGlow);
       this.landscape.drawAtmosphere(ctx, p);
       return;

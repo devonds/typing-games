@@ -1,75 +1,37 @@
-// "Today's practice": about ten minutes across the three games, started from the home page. Short and frequent
-// beats long: a few sentences in Word Garden, a short Balloon Pop round on new keys, then Fresh Cuts. Each game
-// checks for a session on its results screen and offers the next step.
+// "Today's practice": one round of Word Garden, started from the home page. Word Garden is the most thorough
+// teacher, and short daily practice beats long sessions, so this is all a day asks for. Balloon Pop and Fresh Cuts
+// are there for fun whenever a child likes; nothing here nudges anyone to play more.
+import type { LessonId } from "./lessons";
 import { readFor, writeFor } from "./profiles";
 
-export type GameId = "balloon-pop" | "fresh-cuts" | "word-garden";
-
-export interface Step {
-  game: GameId;
-  /** What this step practises: the Learn path's keys, or the trickiest letters. */
-  lesson: "mine" | "weak";
-  /** Shown on the results screen, e.g. "New keys". */
-  label: string;
-  /** How long the round runs: seconds for the arcade games, sentences for Word Garden. */
-  length: number;
-}
-
-export interface Session {
-  day: number;
-  steps: Step[];
-  /** Index of the step being played (or next to play). */
-  at: number;
-}
-
-const KEY = "session/v1";
-
-export const TODAY: readonly Step[] = [
-  { game: "word-garden", lesson: "mine", label: "Sentences", length: 5 },
-  { game: "balloon-pop", lesson: "mine", label: "New keys", length: 150 },
-  { game: "fresh-cuts", lesson: "mine", label: "Quick keys", length: 150 },
-];
-
-export const GAME_NAMES: Record<GameId, string> = {
-  "balloon-pop": "Balloon Pop",
-  "fresh-cuts": "Fresh Cuts",
-  "word-garden": "Word Garden",
+export const TODAY: { lesson: LessonId; sentences: number; littleHands: number } = {
+  lesson: "mine",
+  /** How many sentences: enough to learn something, short enough to finish happily. */
+  sentences: 8,
+  littleHands: 5,
 };
 
-/** Begin today's practice; returns the first step. */
-export function startSession(profileId: string, day: number): Step {
-  writeFor(profileId, KEY, { day, steps: [...TODAY], at: 0 } satisfies Session);
-  return TODAY[0];
+export type PracticeState = "none" | "started" | "done";
+
+interface Saved {
+  day: number;
+  state: PracticeState;
 }
 
-/** Today's session, if one is under way (yesterday's unfinished one doesn't count). */
-export function currentSession(profileId: string, day: number): Session | null {
-  const s = readFor<Session | { day: -1 }>(profileId, KEY, { day: -1 });
-  return "steps" in s && s.day === day && s.at < s.steps.length ? s : null;
+const KEY = "practice/v1";
+
+/** Where today's practice is for this player. Yesterday's counts for nothing. */
+export function practiceState(profileId: string, day: number): PracticeState {
+  const s = readFor<Saved>(profileId, KEY, { day: -1, state: "none" });
+  return s.day === day ? s.state : "none";
 }
 
-/** The step this game should play now, if a session is on and it's this game's turn. */
-export function stepFor(profileId: string, day: number, game: GameId): Step | null {
-  const s = currentSession(profileId, day);
-  const step = s?.steps[s.at];
-  return step && step.game === game ? step : null;
+/** Begin today's practice: Word Garden's next round will be it. */
+export function startPractice(profileId: string, day: number): void {
+  writeFor(profileId, KEY, { day, state: "started" } satisfies Saved);
 }
 
-/** Mark this game's step done; returns the next step, or null when today's practice is finished. */
-export function finishStep(profileId: string, day: number, game: GameId): Step | null {
-  const s = currentSession(profileId, day);
-  if (!s || s.steps[s.at]?.game !== game) return null;
-  const next = { ...s, at: s.at + 1 };
-  writeFor(profileId, KEY, next);
-  return next.steps[next.at] ?? null;
-}
-
-/** Leave today's practice. */
-export function endSession(profileId: string): void {
-  writeFor(profileId, KEY, { day: -1 });
-}
-
-/** The URL of a game's page, relative to another game's page (they're siblings). */
-export function gameUrl(game: GameId): string {
-  return `../${game}/`;
+/** Today's practice is finished. */
+export function finishPractice(profileId: string, day: number): void {
+  writeFor(profileId, KEY, { day, state: "done" } satisfies Saved);
 }

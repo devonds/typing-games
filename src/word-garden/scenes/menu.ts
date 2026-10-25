@@ -3,7 +3,7 @@ import type { Frame } from "../../shared/input";
 import { LESSON_IDS, lessonById } from "../../shared/lessons";
 import { STAGES, finished, newestKeys } from "../../shared/path";
 import { listProfiles } from "../../shared/profiles";
-import { stepFor } from "../../shared/session";
+import { TODAY, practiceState } from "../../shared/session";
 import { BURSTS, BURST_NAMES, H, LEVEL_NAMES, ROUND_CHOICES, W, type BurstChoice, type FocusChoice, type Level } from "../config";
 import { ownLines } from "../game/own";
 import { loadMarks, loadOwn } from "../storage";
@@ -180,10 +180,10 @@ export class MenuScene implements Scene {
     return s.sound ? "On" : "Off";
   }
 
-  /** Today's practice, if Word Garden's step is next. */
-  private sessionStep() {
+  /** Today's practice has been started from the home page: the next round is it. */
+  private sessionStep(): boolean {
     const { player } = this.app;
-    return stepFor(player.profile.id, player.today, "word-garden");
+    return practiceState(player.profile.id, player.today) === "started";
   }
 
   /** The quiet line under the panel: about the chosen row where it needs explaining, otherwise about Focus. */
@@ -197,8 +197,10 @@ export class MenuScene implements Scene {
     if (this.nudge <= 0 && row === "length" && this.app.settings.length === "check" && !this.app.player.littleHands) {
       return say("A minute of fresh sentences, for a words-per-minute you can compare");
     }
-    const step = this.sessionStep();
-    if (this.nudge <= 0 && step) return say(`Today's practice: ${step.length} sentences of ${sentenceCase(lessonById(step.lesson).name)}, then you're done`, p.accent);
+    if (this.nudge <= 0 && this.sessionStep()) {
+      const count = this.app.player.littleHands ? TODAY.littleHands : TODAY.sentences;
+      return say(`Today's practice: ${count} sentences of ${sentenceCase(lessonById(TODAY.lesson).name)}, then you're done`, p.accent);
+    }
     if (this.nudge <= 0 && this.locked(row)) return say("Set for Little hands");
 
     const player = this.app.player;

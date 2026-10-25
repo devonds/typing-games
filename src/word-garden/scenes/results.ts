@@ -5,7 +5,6 @@ import { weakestFinger } from "../../shared/hands";
 import type { Finger } from "../../shared/keyboard";
 import type { Frame } from "../../shared/input";
 import { masteryProgress } from "../../shared/path";
-import { GAME_NAMES, gameUrl } from "../../shared/session";
 import { H, STARS, W } from "../config";
 import { Bursts } from "../look/bursts";
 import { Landscape } from "../look/landscape";
@@ -18,10 +17,12 @@ import type { App, RoundResult, Scene } from "./scene";
 const LEFT = { x: 36, y: 52, w: 188, h: 152 };
 const RIGHT = { x: 236, y: 52, w: 208, h: 152 };
 const BUTTONS_Y = 232;
+/** With today's practice done there are two lines of goodbye, so the buttons sit lower. */
+const BUTTONS_Y_DONE = 246;
 /** When the new-keys chime plays, as the keys open. */
 const BLOOM_AT = 0.9;
 /** Today's practice done: flowers come up across the meadow, one after another. */
-const MEADOW = { flowers: 13, left: 118, right: 362, every: 0.12, from: 0.5, size: 24 };
+const MEADOW = { flowers: 11, left: 140, right: 340, every: 0.12, from: 0.5, size: 18 };
 
 /** What capitals and punctuation say when they unlock. */
 const MARKS_NEWS = {
@@ -77,19 +78,16 @@ export class ResultsScene implements Scene {
     this.meadow.update(dt, this.landscape.t);
     if (this.t < 0.6) return; // don't let a last keypress skip the results
     for (const key of input.keys) {
-      if (key === "Enter" || key === " ") return this.goOn();
+      if (key === "Enter" || key === " ") return this.app.startGame();
       if (key === "Escape") return this.app.showMenu();
     }
     for (const { x, y } of input.clicks) {
-      if (y >= BUTTONS_Y - 12) return x < W / 2 ? this.goOn() : this.app.showMenu();
+      if (y >= this.buttonsY() - 12) return x < W / 2 ? this.app.startGame() : this.app.showMenu();
     }
   }
 
-  /** Enter: on to the next game of today's practice, otherwise another round. */
-  private goOn(): void {
-    const next = this.result.nextGame;
-    if (next) location.href = gameUrl(next);
-    else this.app.startGame();
+  private buttonsY(): number {
+    return this.result.sessionDone ? BUTTONS_Y_DONE : BUTTONS_Y;
   }
 
   /** Today's practice is done: a row of flowers comes up along the meadow, each with a soft note. */
@@ -219,15 +217,14 @@ export class ResultsScene implements Scene {
     if (r.sessionDone) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, Math.max(0, (this.t - 1.2) / 0.8));
-      text(ctx, "See you tomorrow", W / 2, LEFT.y + LEFT.h + 12, `italic 600 12px ${SERIF}`, p.ink, "center", p.textGlow);
+      const font = `italic 600 11px ${SERIF}`;
+      text(ctx, "Play some Balloon Pop or Fresh Cuts if you feel like practicing more.", W / 2, LEFT.y + LEFT.h + 10, font, p.ink, "center", p.textGlow);
+      text(ctx, "See you tomorrow!", W / 2, LEFT.y + LEFT.h + 23, font, p.ink, "center", p.textGlow);
       ctx.restore();
     }
-    if (r.nextGame) {
-      text(ctx, `Today's practice  ·  Next: ${GAME_NAMES[r.nextGame]}`, W / 2, LEFT.y + LEFT.h + 12, `italic 600 12px ${SERIF}`, p.ink, "center", p.textGlow);
-    }
-    const enter = r.nextGame ? `Enter: ${GAME_NAMES[r.nextGame]}` : "Enter: again";
-    text(ctx, enter, LEFT.x + 22, BUTTONS_Y, `italic 600 11px ${SERIF}`, p.ink, "left", p.textGlow);
-    text(ctx, "Esc: menu", RIGHT.x + RIGHT.w - 22, BUTTONS_Y, `italic 11px ${SERIF}`, p.inkSoft, "right", p.textGlow);
+    const buttonsY = this.buttonsY();
+    text(ctx, "Enter: again", LEFT.x + 22, buttonsY, `italic 600 11px ${SERIF}`, p.ink, "left", p.textGlow);
+    text(ctx, "Esc: menu", RIGHT.x + RIGHT.w - 22, buttonsY, `italic 11px ${SERIF}`, p.inkSoft, "right", p.textGlow);
     this.landscape.drawAtmosphere(ctx, p);
   }
 }

@@ -4,7 +4,6 @@ import { RoundLog } from "../../shared/history";
 import type { Frame } from "../../shared/input";
 import { STAGES, masteryProgress } from "../../shared/path";
 import { Ritual, type RitualView } from "../../shared/ritual";
-import { finishStep } from "../../shared/session";
 import { pickUnit, unitMix } from "../../shared/units";
 import { FREEZE, H, LITTLE_HANDS, LIVES, RITUAL, W } from "../config";
 import { logEvent } from "../game/stats";
@@ -221,7 +220,6 @@ export class PlayScene implements Scene {
     // Stars count keys right first time, so mashing can't buy them.
     const firstTry = presses > 0 ? w.firstTry / presses : 0;
     const [two, three] = LITTLE_HANDS.stars;
-    const next = plan.session ? finishStep(player.profile.id, player.today, "fresh-cuts") : null;
     this.app.showResults({
       score: w.score,
       sliced: this.littleHands ? this.freshSliced : w.sliced,
@@ -236,7 +234,6 @@ export class PlayScene implements Scene {
       unlocked,
       weakestFinger: weakestFinger(player.history),
       stage: plan.lesson === "mine" ? { now: player.path.stage + 1, of: STAGES.length } : null,
-      session: plan.session ? { next: next?.game ?? null } : null,
     });
   }
 
@@ -290,8 +287,7 @@ export class PlayScene implements Scene {
       if (timeLeft !== null) drawClock(ctx, timeLeft, this.plan.seconds!);
     }
     if (this.ritual || this.ritualFade > 0) {
-      const session = this.plan.session ? `Today's practice  ·  ${this.plan.session.step} of ${this.plan.session.of}` : undefined;
-      drawRitual(ctx, this.ritualView, this.t, this.ritual ? 1 : this.ritualFade / RITUAL.fadeOut, this.littleHands, session);
+      drawRitual(ctx, this.ritualView, this.t, this.ritual ? 1 : this.ritualFade / RITUAL.fadeOut, this.littleHands);
     }
 
     if (this.paused) {

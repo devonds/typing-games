@@ -1,6 +1,6 @@
-// What a round will be, worked out as it starts: today's practice step if one is due, the one-minute check, our
+// What a round will be, worked out as it starts: today's practice if it's been started, the one-minute check, our
 // words, or the chosen lesson; and what it asks for (capitals, punctuation). Settings are never saved over here.
-import { currentSession, stepFor, type Step } from "../../shared/session";
+import { TODAY, practiceState } from "../../shared/session";
 import { lessonById } from "../../shared/lessons";
 import type { Rules } from "../game/round";
 import { ownLines, ownRound } from "../game/own";
@@ -17,9 +17,8 @@ export interface RoundSetup {
   keys: string[];
   /** The one-minute check: runs on a clock instead of a count of sentences. */
   check: boolean;
-  /** Today's practice: this step, and where it is in the day ([3, 3] for "3 of 3"). */
-  step: Step | null;
-  stepNumber: [number, number] | null;
+  /** This round is today's practice. */
+  practice: boolean;
 }
 
 export function setUpRound(app: App): RoundSetup {
@@ -30,15 +29,14 @@ export function setUpRound(app: App): RoundSetup {
   const level = little ? "short" : settings.level;
   const need = { today: player.today, speedMatters: player.speedMatters };
   const all = player.practice("all")!;
-  const base = { rules, marks, check: false, step: null, stepNumber: null };
+  const base = { rules, marks, check: false, practice: false };
 
   // Today's practice: its own lesson and length, whatever the settings say.
-  const step = stepFor(player.profile.id, player.today, "word-garden");
-  if (step) {
-    const session = currentSession(player.profile.id, player.today)!;
-    const practice = player.practice(step.lesson) ?? all;
-    const sentences = planRound({ level, count: step.length, keys: practice.keys, weights: practice.weights, onlyKeys: step.lesson === "mine", history: player.history, need, recent: app.recent });
-    return { ...base, sentences, keys: practice.keys, step, stepNumber: [session.at + 1, session.steps.length] };
+  if (practiceState(player.profile.id, player.today) === "started") {
+    const practice = player.practice(TODAY.lesson) ?? all;
+    const count = little ? TODAY.littleHands : TODAY.sentences;
+    const sentences = planRound({ level, count, keys: practice.keys, weights: practice.weights, onlyKeys: TODAY.lesson === "mine", history: player.history, need, recent: app.recent });
+    return { ...base, sentences, keys: practice.keys, practice: true };
   }
 
   if (settings.length === "check" && !little) return { ...base, sentences: checkSentences(level, app.recent), keys: all.keys, check: true };

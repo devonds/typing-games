@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { Player } from "../../src/shared/player";
 import { createProfile } from "../../src/shared/profiles";
 import { seededRandom } from "../../src/shared/rng";
-import { currentSession, finishStep, startSession, stepFor } from "../../src/shared/session";
+import { finishPractice, practiceState, startPractice } from "../../src/shared/session";
 import { nextWanted, pickUnit, press, unitMix } from "../../src/shared/units";
 
 beforeEach(() => {
@@ -63,18 +63,19 @@ describe("units", () => {
 });
 
 describe("today's practice", () => {
-  it("steps through the games in order", () => {
-    startSession("p1", 100);
-    expect(stepFor("p1", 100, "word-garden")?.lesson).toBe("mine");
-    expect(stepFor("p1", 100, "balloon-pop")).toBeNull();
-    expect(finishStep("p1", 100, "word-garden")?.game).toBe("balloon-pop");
-    expect(finishStep("p1", 100, "balloon-pop")?.game).toBe("fresh-cuts");
-    expect(finishStep("p1", 100, "fresh-cuts")).toBeNull();
-    expect(currentSession("p1", 100)).toBeNull();
+  it("is started, then done", () => {
+    expect(practiceState("p1", 100)).toBe("none");
+    startPractice("p1", 100);
+    expect(practiceState("p1", 100)).toBe("started");
+    expect(practiceState("p2", 100)).toBe("none");
+    finishPractice("p1", 100);
+    expect(practiceState("p1", 100)).toBe("done");
   });
 
   it("doesn't carry over to another day", () => {
-    startSession("p1", 100);
-    expect(currentSession("p1", 101)).toBeNull();
+    startPractice("p1", 100);
+    expect(practiceState("p1", 101)).toBe("none");
+    finishPractice("p1", 101);
+    expect(practiceState("p1", 102)).toBe("none");
   });
 });

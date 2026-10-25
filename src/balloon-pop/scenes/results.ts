@@ -5,7 +5,6 @@ import { weakestFinger } from "../../shared/hands";
 import type { Frame } from "../../shared/input";
 import { FINGER_NAMES, KEYS } from "../../shared/keyboard";
 import { masteryProgress } from "../../shared/path";
-import { GAME_NAMES, type Step } from "../../shared/session";
 import { STARS, W } from "../config";
 import { C, FINGER_TINTS } from "../look/palette";
 import type { Pixels } from "../look/pixels";
@@ -42,8 +41,6 @@ export class ResultsScene implements Scene {
   /** Each key's mastery after this round, 0..1. */
   private readonly progress = new Map<string, number>();
   private readonly weakFinger: string | null;
-  /** Today's practice: the next step (null after the last one), or undefined outside a session. */
-  private readonly next: Step | null | undefined;
 
   constructor(
     private readonly app: App,
@@ -54,7 +51,6 @@ export class ResultsScene implements Scene {
     for (const k of [...result.keys, ...result.unlocked]) this.progress.set(k, masteryProgress(player.history.letters[k], player.speedMatters));
     const finger = weakestFinger(player.history);
     this.weakFinger = finger ? FINGER_NAMES[finger].toUpperCase() : null;
-    this.next = result.round.step ? app.finishStep() : undefined;
   }
 
   update(dt: number, input: Frame): void {
@@ -72,18 +68,10 @@ export class ResultsScene implements Scene {
     }
   }
 
-  /** Enter: page 1 -> page 2 -> the next game of Today's practice, or another round. */
+  /** Enter: page 1 -> page 2 -> another round. */
   private advance(): void {
     if (this.page === 0) this.turn(1);
-    else if (this.next) this.app.openGame(this.next.game);
     else this.app.startGame();
-  }
-
-  /** Today's practice: where it goes from here. */
-  private drawSession(p: Pixels, y: number): void {
-    if (this.next === undefined) return;
-    if (this.next) p.centred(`NEXT: ${GAME_NAMES[this.next.game].toUpperCase()}`, W / 2, y, C.cyan);
-    else if (blink(this.t, 2)) p.centred("TODAY'S PRACTICE DONE!", W / 2, y, C.yellow);
   }
 
   private turn(page: number): void {
@@ -99,7 +87,7 @@ export class ResultsScene implements Scene {
     else this.drawKeys(p);
     // Two dots show which page this is.
     for (let i = 0; i < 2; i++) p.rect(W / 2 - 4 + i * 6, BUTTONS_Y + 2, 3, 3, i === this.page ? C.white : C.charcoal);
-    const enter = this.page === 0 ? "ENTER: YOUR KEYS" : this.next ? "ENTER: GO!" : "ENTER: AGAIN";
+    const enter = this.page === 0 ? "ENTER: YOUR KEYS" : "ENTER: AGAIN";
     p.text(enter, PANEL.x + 8, BUTTONS_Y, C.lime);
     p.text("ESC: MENU", PANEL.x + PANEL.w - 8 - (9 * 6 - 1), BUTTONS_Y, C.silver);
   }
@@ -133,9 +121,7 @@ export class ResultsScene implements Scene {
 
     const tricky = r.tricky.length > 0 ? `PRACTICE: ${r.tricky.join(" ").toUpperCase()}` : "NONE GOT AWAY!";
     p.centred(tricky, W / 2, 90, r.tricky.length > 0 ? C.orange : C.lime);
-    if (r.unlocked.length > 0) {
-      if (blink(this.t, 2)) p.centred("NEW KEYS! PRESS ENTER", W / 2, 104, C.yellow);
-    } else this.drawSession(p, 104);
+    if (r.unlocked.length > 0 && blink(this.t, 2)) p.centred("NEW KEYS! PRESS ENTER", W / 2, 104, C.yellow);
   }
 
   private drawKeys(p: Pixels): void {
@@ -175,6 +161,5 @@ export class ResultsScene implements Scene {
     p.centred("FILLED KEYS ARE LEARNED", W / 2, 86, C.slate);
     if (this.weakFinger) p.centred(`${this.weakFinger} NEEDS PRACTICE`, W / 2, 97, C.orange);
     else if (r.unlocked.length > 0) p.centred("THEY JOIN IN NEXT ROUND", W / 2, 97, C.lime);
-    this.drawSession(p, 108);
   }
 }

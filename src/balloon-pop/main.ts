@@ -5,7 +5,6 @@ import { Input, spent } from "../shared/input";
 import type { RoundLog } from "../shared/history";
 import { Player } from "../shared/player";
 import { setCurrent, updateProfile } from "../shared/profiles";
-import { currentSession, finishStep, gameUrl, stepFor, type GameId, type Step } from "../shared/session";
 import { Pixels } from "./look/pixels";
 import type { Scenery } from "./look/scenery";
 import { MenuScene } from "./scenes/menu";
@@ -32,8 +31,6 @@ fit();
 const sfx = new Sfx();
 const input = new Input(canvas, { width: W, height: H }, () => sfx.unlock());
 let scene: Scene;
-
-const GAME: GameId = "balloon-pop";
 
 class Game implements App {
   player = new Player();
@@ -82,32 +79,16 @@ class Game implements App {
     scene = new MenuScene(this);
   }
 
-  /** Start a round: Today's practice step if it's this game's turn, otherwise the menu's settings. */
+  /** Start a round with the menu's settings. */
   startGame(): void {
     const { player, settings } = this;
-    const step = stepFor(player.profile.id, player.today, GAME);
-    const session = step ? currentSession(player.profile.id, player.today) : null;
-    let lesson = step?.lesson ?? settings.lesson;
-    let practice = player.practice(lesson);
-    if (!practice && step) practice = player.practice((lesson = "mine")); // tricky letters need some history first
+    const lesson = settings.lesson;
+    const practice = player.practice(lesson);
     if (!practice) return this.showMenu(); // Tricky letters without enough history; the menu explains
-    // Little hands keep their 20-balloon rounds, in a session too.
-    const seconds = player.littleHands ? null : step ? step.length : settings.length === "timed" ? ROUND_SECONDS : null;
-    const round: Round = {
-      lesson,
-      seconds,
-      step,
-      stepLabel: session ? `${session.at + 1} OF ${session.steps.length}` : null,
-    };
+    // Little hands keep their 20-balloon rounds.
+    const seconds = player.littleHands ? null : settings.length === "timed" ? ROUND_SECONDS : null;
+    const round: Round = { lesson, seconds };
     scene = new PlayScene(this, practice, round);
-  }
-
-  finishStep(): Step | null {
-    return finishStep(this.player.profile.id, this.player.today, GAME);
-  }
-
-  openGame(game: GameId): void {
-    location.href = gameUrl(game);
   }
 
   showResults(result: RoundResult, scenery: Scenery): void {

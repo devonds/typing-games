@@ -29,8 +29,8 @@ is `PLAN-teaching.md`).
   sentences, later with capitals (Shift) and punctuation.
 - **Pressure when it helps.** Things carrying keys still being learned move slowly. Mashing keys doesn't work (a wrong
   key rests for half a second).
-- **Short and often.** "Today's practice" on the home page is about ten minutes across the three games. The home page
-  shows keys learned, a streak of days and Word Garden's one-minute speed check.
+- **Short and often.** "Today's practice" on the home page is one round of Word Garden: 8 sentences (5 for Little
+  hands). The end mentions Balloon Pop and Fresh Cuts for anyone who feels like more, without pushing. The home page shows keys learned, a streak of days and Word Garden's one-minute speed check.
 - **Little hands.** A per-player setting for children under about 7: no time pressure, finger guide always on,
   accuracy only, short words, stars instead of scores.
 
